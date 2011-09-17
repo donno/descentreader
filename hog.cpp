@@ -37,6 +37,7 @@
 
 #include <iterator>
 #include <utility>
+#include <vector>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,15 +93,18 @@ public:
     iterator begin();
     iterator end();
 
-  unsigned char* operator *();
-  // This increments to the next file.
-  // DONE: Make it so it returns the same value if called multiple times.
+
+  std::shared_ptr<std::vector<uint8_t>> operator *();
+  // Returns the data of the current file and points the Current* files to the next
+  // file. You should still call NextFile() and not rely on the fact it is moved to
+  // the next file for 
 
 private:
   FILE* myFile;
   uint8_t myHeader[sizeof(magic)];
   struct HogFileHeader myChildFile;
-  uint8_t* myFileDataPtr; // Only valid when we are deferenced until the next read.
+
+  std::shared_ptr<std::vector<uint8_t>>  myFileDataPtr; // Only valid when we are deferenced until the next read.
 };
 
 class HogReaderIterator
@@ -253,7 +257,7 @@ unsigned int HogReader::CurrentFileSize() const
     return myChildFile.size;
 }
 
-unsigned char* HogReader::operator *()
+std::shared_ptr<std::vector<uint8_t>> HogReader::operator *()
 {
   if( myFileDataPtr )
   {
@@ -266,9 +270,10 @@ unsigned char* HogReader::operator *()
 
   const unsigned int size = CurrentFileSize();
 
-  uint8_t* data = new unsigned char[size]; 
+  auto data = std::make_shared<std::vector<uint8_t>>(size);
 
-  if( fread( data, size, 1, myFile ) != 1 ) return NULL;
+
+  if( fread( &data->front(), size, 1, myFile ) != 1 ) return NULL;
 
   // The data is read so we need to inform the NextFile function not to increment.
   myFileDataPtr = data;
@@ -276,7 +281,6 @@ unsigned char* HogReader::operator *()
   // Read in the header for the next file.
   fread( &myChildFile.name, 13, 1, myFile );
   fread( &myChildFile.size, 4, 1, myFile );
-
 
   return data;
 }
@@ -330,11 +334,9 @@ int main(int argc, char* argv[])
 			filename.rbegin())) return;
 
        	printf("%s %d\n", n.first, n.second->CurrentFileSize());
-	unsigned char* data = **(n.second);
+	auto dataPtr = **(n.second);
+	const std::vector<uint8_t>& data = *dataPtr.get(); // Get the vector.
 	printf("%c%c%c\n", data[0], data[1], data[2]);
-
-
-	delete[] data;
       });
 
     // std::for_each(
