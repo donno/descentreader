@@ -42,29 +42,33 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+  typedef signed __int8     int8_t;
+  typedef signed __int16    int16_t;
+  typedef signed __int32    int32_t;
+  typedef unsigned __int8   uint8_t;
+  typedef unsigned __int16  uint16_t;
+  typedef unsigned __int32  uint32_t;
+#else
+  #include <stdint.h>
+#endif
+
+static_assert( sizeof(uint8_t) == 1 , "The size of uint8_t is incorrect it must be 1-byte" );
+static_assert( sizeof(uint32_t) == 4, "The size of uint32_t is incorrect it must be 4-bytes" );
+static_assert( sizeof(uint8_t) == sizeof(char), "The size of a char must be 1-byte" );
+
 // The 3-byte MAGIC number at the start of the file format used to identifiy the
 // file as being a Descent HOG file.
-static char magic[3] = {'D', 'H', 'F'};
+static uint8_t magic[3] = {'D', 'H', 'F'};
 
 struct HogFileHeader
 {
-    char name[13]; // Padded to 13 bytes with \0.
-    int size; // The filesize as N bytes.
+  char name[13]; // Padded to 13 bytes with \0.
+  uint32_t size; // The filesize as N bytes.
 };
-
 
 // Warning: The above structure is padded on x86 so you can not just read in the
 // whole thing.
-
-// class File
-// {
-//   public File(FILE* file, int size);
-
-// private:
-//   // TODO: Consider storing a std::string of the filename.
-//   int size;
-//   unsigned char* myData;
-// };
 
 class HogReaderIterator;
 
@@ -89,24 +93,27 @@ public:
     iterator end();
 
   unsigned char* operator *();
+  // This increments to the next file.
+  // DONE: Make it so it returns the same value if called multiple times.
 
 private:
-    FILE* myFile;
-    char myHeader[sizeof(magic)];
-    struct HogFileHeader myChildFile;
+  FILE* myFile;
+  uint8_t myHeader[sizeof(magic)];
+  struct HogFileHeader myChildFile;
+  uint8_t* myFileDataPtr; // Only valid when we are deferenced until the next read.
 };
 
 class HogReaderIterator
 {
 public:
-  typedef std::pair<const char*, unsigned int> value_type;
+  typedef std::pair<const char*, HogReader*> value_type;
 
   HogReaderIterator()
     : myReader(NULL),
       myProgress(false)
     {
       myData.first = NULL;
-      myData.second = 0;
+      myData.second = myReader;
     }
 
   HogReaderIterator( HogReader& Reader )
@@ -114,7 +121,7 @@ public:
        myProgress(Reader.IsValid())
     {
       myData.first = Reader.CurrentFileName();
-      myData.second = Reader.CurrentFileSize();
+      myData.second = myReader;
     }
   // Itr(const Itr& o);                   // Copy constructor
   // Itr& operator=(const Itr& o);        // Assignment operator
@@ -124,7 +131,7 @@ public:
   bool operator!=(const HogReaderIterator& o) const; // { return !(this == o); 
   
 private:
-  std::pair<const char*, unsigned int> myData;
+  value_type myData;
   bool myProgress;
   HogReader* myReader;
 };
@@ -134,7 +141,9 @@ HogReaderIterator& HogReaderIterator::operator++()
     // You can't increment the null so error.
     myProgress = myReader->NextFile();
     myData.first = myReader->CurrentFileName();
-    myData.second = myReader->CurrentFileSize();
+    
+    // myData.second == myReader.
+    //myData.second = myReader->CurrentFileSize();
     return *this;
 }
 
@@ -177,7 +186,8 @@ HogReader::iterator HogReader::end()
 }
 
 HogReader::HogReader(const char* filename)
-: myFile(NULL)
+  : myFile(NULL),
+    myFileDataPtr(NULL)
 {
     myFile = fopen( filename, "rb" );
     myChildFile.name[0] = '\0';
@@ -207,13 +217,23 @@ HogReader::~HogReader()
 bool HogReader::IsValid() const
 {
     if( !myFile ) return false;
-    return strncmp( myHeader, magic, 3 ) == 0;
+    return memcmp( myHeader, magic, 3 ) == 0;
 }
 
 bool HogReader::NextFile()
 {
     // Skip the current file.
     if( feof(myFile) ) return false; 
+
+    if (myFileDataPtr)
+    {
+      // The data for the current file has already been read in and the header for
+      // the next file has already been read.
+      myFileDataPtr = NULL;
+      return true;
+    }
+
+    // Skip of the data for the current file.
     if( fseek( myFile, myChildFile.size, SEEK_CUR ) != 0 ) return false;
 
     // Read in the header for the next file.
@@ -233,11 +253,30 @@ unsigned int HogReader::CurrentFileSize() const
     return myChildFile.size;
 }
 
-
 unsigned char* HogReader::operator *()
 {
-  
-  unsigned char* data = new unsigned char[CurrentFileSize()];
+  if( myFileDataPtr )
+  {
+    // The current file has already be de-ferenced so just return it.
+    return myFileDataPtr;
+  }
+
+  // Skip the current file.
+  if( feof(myFile) ) return NULL; 
+
+  const unsigned int size = CurrentFileSize();
+
+  uint8_t* data = new unsigned char[size]; 
+
+  if( fread( data, size, 1, myFile ) != 1 ) return NULL;
+
+  // The data is read so we need to inform the NextFile function not to increment.
+  myFileDataPtr = data;
+
+  // Read in the header for the next file.
+  fread( &myChildFile.name, 13, 1, myFile );
+  fread( &myChildFile.size, 4, 1, myFile );
+
 
   return data;
 }
@@ -279,7 +318,7 @@ int main(int argc, char* argv[])
   {
     // Iterate over the file list and list all the files which do not
     // end in the 'rdl' file extension.
-    std::string extentionRdl(".sng");
+    std::string extentionRdl(".rdl");
 
     std::for_each(
       reader.begin(), reader.end(),
@@ -289,27 +328,25 @@ int main(int argc, char* argv[])
 	if (!std::equal(extentionRdl.rbegin(), 
 			extentionRdl.rend(),
 			filename.rbegin())) return;
-	printf("%s %d\n", n.first, n.second);
-	
-	//RdlReader
+
+       	printf("%s %d\n", n.first, n.second->CurrentFileSize());
+	unsigned char* data = **(n.second);
+	printf("%c%c%c\n", data[0], data[1], data[2]);
+
+
+	delete[] data;
       });
 
-    std::for_each(
-      reader.begin(), reader.end(),
-      [&extentionRdl](HogReader::iterator::value_type n)
-      {
-	std::string filename(n.first);
-	if (!std::equal(extentionRdl.rbegin(), 
-			extentionRdl.rend(),
-			filename.rbegin())) return;
-	printf("%s %d\n", n.first, n.second);
-
-//	unsigned char* data = *(n.second);
-//	printf("%c%c%c\n", data[0], data[1], data[2]);
-
-
-	//RdlReader
-      });
+    // std::for_each(
+    //   reader.begin(), reader.end(),
+    //   [&extentionRdl](HogReader::iterator::value_type n)
+    //   {
+    // 	std::string filename(n.first);
+    // 	if (!std::equal(extentionRdl.rbegin(), 
+    // 			extentionRdl.rend(),
+    // 			filename.rbegin())) return;
+    // 	printf("%s %d\n", n.first, n.second->CurrentFileSize());
+    //   });
   }
   return 0;
 }
