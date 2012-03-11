@@ -11,7 +11,7 @@
 //
 //                The file format is as follows:
 //
-//                - Magic number which is 3 bytes and corresponding to the 
+//                - Magic number which is 3 bytes and corresponding to the
 //                  string "DHF"
 
 //                - A series of files which are preceded by a short header,
@@ -89,7 +89,7 @@ public:
 
   iterator begin();
   iterator end();
-  
+
 private:
   FILE* myFile;
   uint8_t myHeader[sizeof(magic)];
@@ -123,8 +123,8 @@ public:
   HogReaderIterator& operator++();                   // Next element
   value_type& operator*();                   // Dereference
   bool operator==(const HogReaderIterator& o) const; // Comparison
-  bool operator!=(const HogReaderIterator& o) const; // { return !(this == o); 
-  
+  bool operator!=(const HogReaderIterator& o) const; // { return !(this == o);
+
 private:
   value_type myData;
   bool myProgress;
@@ -136,7 +136,7 @@ HogReaderIterator& HogReaderIterator::operator++()
     // You can't increment the null so error.
     myProgress = myReader->NextFile();
     myData.first = myReader->CurrentFileName();
-    
+
     // myData.second == myReader.
     //myData.second = myReader->CurrentFileSize();
     return *this;
@@ -145,7 +145,7 @@ HogReaderIterator& HogReaderIterator::operator++()
 HogReaderIterator::value_type& HogReaderIterator::operator*()
 {
   return myData;
-}  
+}
 
 bool HogReaderIterator::operator==(const HogReaderIterator& o) const
 {
@@ -171,7 +171,7 @@ HogReader::iterator HogReader::begin()
     if( fread( &myChildFile.name, 13, 1, myFile ) != 1 ) HogReaderIterator();
     if( fread( &myChildFile.size, 4, 1, myFile ) != 1 )  HogReaderIterator();
   }
-  
+
   return HogReaderIterator(*this);
 }
 
@@ -218,13 +218,13 @@ bool HogReader::IsValid() const
 bool HogReader::NextFile()
 {
     // Skip the current file.
-    if( feof(myFile) ) return false; 
+    if( feof(myFile) ) return false;
 
     if( !myFileDataPtr )
     {
       // The data for the current file has not been read so skip over the data section
       // for the file.
-      
+
       if( fseek( myFile, myChildFile.size, SEEK_CUR ) != 0 ) return false;
     }
 
@@ -255,7 +255,7 @@ HogReader::T_FileData HogReader::CurrentFile()
   }
 
   // Skip the current file.
-  if( feof(myFile) ) return NULL; 
+  if( feof(myFile) ) return NULL;
 
   const unsigned int size = CurrentFileSize(); // Size in bytes
 
@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
     //   [&extentionRdl](HogReader::iterator::value_type n)
     //   {
     // 	std::string filename(n.first);
-    // 	if (!std::equal(extentionRdl.rbegin(), 
+    // 	if (!std::equal(extentionRdl.rbegin(),
     // 			extentionRdl.rend(),
     // 			filename.rbegin())) return;
     // 	printf("%s %d\n", n.first, n.second->CurrentFileSize());
