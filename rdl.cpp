@@ -33,10 +33,24 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
+
+// TODO: Refactor this out.
+inline double fixedToFloating(int32_t value) { return value / 65536.0; }
+inline double fixedToFloating(int16_t value) { return value / 4096.0; }
+
+inline void printBitmask(uint8_t bitmask)
+{
+  for (uint8_t j = 0; j<8; ++j, bitmask = bitmask>> 1)
+  {
+    putchar((bitmask & 1) ? '1' : '0');
+  }
+  putchar('\n');
+}
 
 // The 4-byte MAGIC number at the start of the file format used to identifiy the
 // file as being a Descent HOG file.
-static uint8_t magicRdl[4] = {'L', 'V', 'L', 'P'};
+static uint8_t magicRdl[4] = { 'L', 'V', 'L', 'P' };
 
 struct RdlHeader
 {
@@ -59,8 +73,8 @@ static_assert(sizeof(RdlHeader) == 20,
               "The RdlHeader structure is incorrectly packed");
 
 RdlReader::RdlReader(const std::vector<uint8_t>& Data)
-: myData(Data),
-  myHeader(reinterpret_cast<const struct RdlHeader* const>(&Data.front()))
+    : myData(Data),
+      myHeader(reinterpret_cast<const struct RdlHeader* const>(&Data.front()))
 {
   printf("Version: %d\n", myHeader->version);
   printf("Mine data offset: %d\n", myHeader->mineDataOffset);
@@ -76,41 +90,42 @@ bool RdlReader::IsValid() const
   return myHeader->fileSize == myData.size();
 }
 
-RdlReader::~RdlReader()
+std::vector<Vertex> RdlReader::Vertices() const
 {
-}
+  // First step, determine how many vertices there are.
+  size_t index = myHeader->mineDataOffset + 1 /* version byte */;
+  const uint16_t vertexCount = (myData[index + 1] << 8) +  myData[index + 0];
+  std::vector<Vertex> vertices(vertexCount);
 
-// TODO: Refactor this out.
-inline double fixedToFloating(int32_t value) { return value / 65536.0; }
+  index += 2; // For reading the vertex count.
+
+  int32_t buffer[3];
+  for (int i = 0; i < vertexCount; index += sizeof(buffer), ++i)
+  {
+    memcpy(&buffer, &myData[index], sizeof(buffer));
+
+    // 32-bit fixed point number, in 16:16 format
+    vertices[i].x = fixedToFloating(buffer[0]);
+    vertices[i].y = fixedToFloating(buffer[1]);
+    vertices[i].z = fixedToFloating(buffer[2]);
+  }
+
+  return vertices;
+}
 
 void RdlReader::DoStuff()
 {
-  //32-bit fixed point number, in 16:16 format
-  size_t index = myHeader->mineDataOffset;
-  const uint8_t version = myData[index];
-  index = index + 1;
-
-  const uint16_t vertexCount = (myData[index + 1] << 8) +  myData[index + 0];
-  const uint16_t cubeCount   = (myData[index + 3] << 8) + myData[index + 2];
-
-  index += 4; // We just read 4 bytes for the two counts.
+  size_t index = myHeader->mineDataOffset + 1 /* version */;
+  const uint16_t vertexCount = (myData[index + 1] << 8) + myData[index + 0];
+  const uint16_t cubeCount = (myData[index + 3] << 8) + myData[index + 2];
+  index += 4; // Four bytes were just read for the two count above.
 
   printf("Vertex count: %d\n", vertexCount);
   printf("Cube count: %d\n", cubeCount);
 
-  int32_t buffer[3];
-  for (int i = 0; i < vertexCount; index += sizeof(buffer), ++i )
-  {
-    memcpy( &buffer, &myData[index], sizeof(buffer) );
-    const double x = fixedToFloating(buffer[0]);
-    const double y = fixedToFloating(buffer[1]);
-    const double z = fixedToFloating(buffer[2]);
-
-    printf("%f %f %f\n", x, y, z);
-  }
-
-  // A check to ensure index is current positioned at the start of the cubes.
-  assert( index == myHeader->mineDataOffset + 1 + 4 + 12 *  vertexCount );
+  // Vertices are read by the Vertices() method, so we seek to the start
+  // of the cubes.
+  index = myHeader->mineDataOffset + 1 + 4 + 12 * vertexCount;
 
   exit(0);
 }
