@@ -124,18 +124,16 @@ std::vector<Vertex> RdlReader::Vertices() const
 
 void RdlReader::DoStuff()
 {
-  size_t index = myHeader->mineDataOffset + 1 /* version */;
-  const uint16_t vertexCount = (myData[index + 1] << 8) + myData[index + 0];
-  const uint16_t cubeCount = (myData[index + 3] << 8) + myData[index + 2];
-  index += 4; // Four bytes were just read for the two count above.
+  const size_t countIndex = myHeader->mineDataOffset + 1 /* version */;
+  const uint16_t vertexCount =
+      (myData[countIndex + 1] << 8) + myData[countIndex + 0];
+  const uint16_t cubeCount =
+      (myData[countIndex + 3] << 8) + myData[countIndex + 2];
 
   printf("Vertex count: %d\n", vertexCount);
   printf("Cube count: %d\n", cubeCount);
 
-  // Vertices are read by the Vertices() method, so we seek to the start
-  // of the cubes.
-  index = myHeader->mineDataOffset + 1 + 4 + 12 * vertexCount;
-
+  size_t index = CubeOffset();
   // Count the number of walls across all cubes.
   uint16_t totalWallCount = 0;
 
@@ -251,7 +249,7 @@ void RdlReader::DoStuff()
       ++sidesWithTextures;
 
       textures[j].primaryTextureNumber =
-        (myData[index + 1] << 8) + myData[index + 0];
+          (myData[index + 1] << 8) + myData[index + 0];
 
       index += 2; // 2 for the primary number.
 
@@ -293,4 +291,14 @@ void RdlReader::DoStuff()
   }
 
   printf("Total wall count: %d\n", totalWallCount);
+}
+
+size_t RdlReader::CubeOffset() const
+{
+  const size_t index = myHeader->mineDataOffset + 1 /* version */;
+  const uint16_t vertexCount = (myData[index + 1] << 8) + myData[index + 0];
+
+  // The 1 is the size of the version number, the 4 is for the four bytes that
+  // are the vertex and cube counts then lastly we skip over all the vertices.
+  return myHeader->mineDataOffset + 1 + 4 + 12 * vertexCount;
 }

@@ -67,6 +67,9 @@ public:
   void DoStuff();
 
 private:
+  size_t CubeOffset() const;
+  // The index of the first cube in the file.
+
   const std::vector<uint8_t>& myData;
   const RdlHeader* const myHeader;
 };
