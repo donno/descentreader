@@ -178,52 +178,44 @@ int main(int argc, char* argv[])
   }
 
   // File list.
-
   const bool listingAllFiles = false;
-
   if (listingAllFiles)
   {
-    std::for_each(
-      reader.begin(), reader.end(),
-      [](HogReader::iterator::value_type n)
-      {
-	printf("%s %d\n", n.first, n.second);
-      });
+    printf("Filename\n");
+    printf("========\n");
+    std::for_each(reader.begin(), reader.end(),
+                  [](HogReader::iterator::value_type n)
+    { printf("%s %p\n", n.first, n.second); });
   }
   else
   {
     // Iterate over the file list and list all the files which do not
     // end in the 'rdl' file extension.
     const std::string extentionRdl(".rdl");
+    std::for_each(reader.begin(), reader.end(),
+                  [&extentionRdl](HogReader::iterator::value_type n)
+    {
+      const std::string filename(n.first);
+      if (!std::equal(extentionRdl.rbegin(), extentionRdl.rend(),
+                      filename.rbegin()))
+        return;
 
-    std::for_each(
-      reader.begin(), reader.end(),
-      [&extentionRdl](HogReader::iterator::value_type n)
-      {
-        std::string filename(n.first);
-        if (!std::equal(extentionRdl.rbegin(),
-                        extentionRdl.rend(),
-                        filename.rbegin())) return;
+      printf("%s %d\n", n.first, n.second->CurrentFileSize());
+      const auto data = n.second->CurrentFile();
+      RdlReader rdlReader(data);
+      printf("Is valid RDL: %s\n", rdlReader.IsValid() ? "Yes" : "No");
 
-        printf("%s %d\n", n.first, n.second->CurrentFileSize());
-        const auto data = n.second->CurrentFile();
-        RdlReader reader(data);
-        printf("Is valid Rdl: %s\n", reader.IsValid() ? "Yes" : "No");
+      if (!rdlReader.IsValid()) return;
 
-        if( !reader.IsValid() ) return;
-        reader.DoStuff();
-      });
+      const auto vertices = rdlReader.Vertices();
+      printf("Vertex count: %d\n", vertices.size());
+      std::for_each(vertices.begin(), vertices.end(),
+                    [](Vertex v)
+                    { printf("%16f %16f %16f\n", v.x, v.y, v.z); });
 
-    // std::for_each(
-    //   reader.begin(), reader.end(),
-    //   [&extentionRdl](HogReader::iterator::value_type n)
-    //   {
-    // 	std::string filename(n.first);
-    // 	if (!std::equal(extentionRdl.rbegin(),
-    // 			extentionRdl.rend(),
-    // 			filename.rbegin())) return;
-    // 	printf("%s %d\n", n.first, n.second->CurrentFileSize());
-    //   });
+
+      exit(0);
+    });
   }
   return 0;
 }
