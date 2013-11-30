@@ -35,68 +35,31 @@
 //
 /////
 
+#include "hogreader.hpp"
 #include "rdl.hpp"
 
+#include <memory>
 #include <iterator>
 #include <utility>
 #include <vector>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static_assert( sizeof(uint8_t) == 1 , "The size of uint8_t is incorrect it must be 1-byte" );
-static_assert( sizeof(uint32_t) == 4, "The size of uint32_t is incorrect it must be 4-bytes" );
-static_assert( sizeof(uint8_t) == sizeof(char), "The size of a char must be 1-byte" );
+#ifdef _MSC_VER
+static_assert(sizeof(uint8_t) == 1,
+              "The size of uint8_t is incorrect it must be 1-byte");
+static_assert(sizeof(uint32_t) == 4,
+              "The size of uint32_t is incorrect it must be 4-bytes");
+static_assert(sizeof(uint8_t) == sizeof(char),
+              "The size of a char must be 1-byte");
+#endif
 
 // The 3-byte MAGIC number at the start of the file format used to identifiy the
 // file as being a Descent HOG file.
 static uint8_t magic[3] = {'D', 'H', 'F'};
-
-struct HogFileHeader
-{
-  char name[13]; // Padded to 13 bytes with \0.
-  uint32_t size; // The filesize as N bytes.
-};
-
-// Warning: The above structure is padded on x86 so you can not just read in the
-// whole thing.
-
-class HogReaderIterator;
-
-class HogReader
-{
-public:
-  typedef HogReaderIterator iterator;
-
-  typedef std::shared_ptr<std::vector<uint8_t>> T_FileData;
-
-    HogReader(const char* filename);
-    ~HogReader();
-
-    bool IsValid() const;
-    // Returns true if the file was succesfully opened and the magic header is
-    // correct.
-
-    bool NextFile();
-
-
-  T_FileData CurrentFile();
-  // Returns a shared pointer to the vector containing the data for the current file.
-
-  const char* CurrentFileName() const;
-  unsigned int CurrentFileSize() const;
-
-  iterator begin();
-  iterator end();
-
-private:
-  FILE* myFile;
-  uint8_t myHeader[sizeof(magic)];
-  struct HogFileHeader myChildFile;
-
-  T_FileData myFileDataPtr; // Only valid when we are deferenced until the next read.
-};
 
 class HogReaderIterator
 {
@@ -167,103 +130,96 @@ HogReader::iterator HogReader::begin()
   // Sync back up to the start just after the magic number.
   if (IsValid())
   {
-    fseek ( myFile , sizeof(magic) , SEEK_SET );
-    if( fread( &myChildFile.name, 13, 1, myFile ) != 1 ) HogReaderIterator();
-    if( fread( &myChildFile.size, 4, 1, myFile ) != 1 )  HogReaderIterator();
+    fseek(myFile, sizeof(magic), SEEK_SET);
+    if (fread(&myChildFile.name, 13, 1, myFile) != 1) HogReaderIterator();
+    if (fread(&myChildFile.size, 4, 1, myFile) != 1) HogReaderIterator();
   }
 
   return HogReaderIterator(*this);
 }
 
-HogReader::iterator HogReader::end()
+HogReader::iterator HogReader::end() { return HogReaderIterator(); }
+
+HogReader::HogReader(const char* filename) : myFile(nullptr)
 {
-  return HogReaderIterator();
-}
+  myFile = fopen(filename, "rb");
+  myChildFile.name[0] = '\0';
+  myChildFile.size = 0;
+  if (!myFile) return;
 
-HogReader::HogReader(const char* filename)
-  : myFile(NULL),
-    myFileDataPtr(NULL)
-{
-    myFile = fopen( filename, "rb" );
-    myChildFile.name[0] = '\0';
-    myChildFile.size = 0;
-    if( !myFile ) return;
+  const size_t count = 1;
+  if (fread(myHeader, sizeof(myHeader), count, myFile) != count)
+  {
+    myHeader[0] = '\0'; // Failed to load.
+    return;
+  }
 
-    const size_t count = 1;
-    if( fread(myHeader, sizeof(myHeader), count, myFile) != count )
-    {
-      myHeader[0] = '\0'; // Failed to load.
-      return;
-    }
-
-    // Read in the header for the first file.
-    if (IsValid())
-    {
-      if( fread( &myChildFile.name, 13, 1, myFile ) != 1 ) return;
-      if( fread( &myChildFile.size, 4, 1, myFile ) != 1 ) return;
-    }
+  // Read in the header for the first file.
+  if (IsValid())
+  {
+    if (fread(&myChildFile.name, 13, 1, myFile) != 1) return;
+    if (fread(&myChildFile.size, 4, 1, myFile) != 1) return;
+  }
 }
 
 HogReader::~HogReader()
 {
-    if (myFile) fclose(myFile);
+  if (myFile) fclose(myFile);
 }
 
 bool HogReader::IsValid() const
 {
-  if( !myFile ) return false;
-  return memcmp( myHeader, magic, 3 ) == 0;
+  if (!myFile) return false;
+  return memcmp(myHeader, magic, 3) == 0;
 }
 
 bool HogReader::NextFile()
 {
-    // Skip the current file.
-    if( feof(myFile) ) return false;
+  // Skip the current file.
+  if (feof(myFile)) return false;
 
-    if( !myFileDataPtr )
-    {
-      // The data for the current file has not been read so skip over the data section
-      // for the file.
-
-      if( fseek( myFile, myChildFile.size, SEEK_CUR ) != 0 ) return false;
-    }
-
-    // Read in the header for the next file.
-    if( fread( &myChildFile.name, 13, 1, myFile ) != 1 ) return false;
-    if( fread( &myChildFile.size, 4, 1, myFile ) != 1 ) return false;
-
-    myFileDataPtr = NULL; // Invalid the data as we have moved along.
-    return true;
-}
-
-const char* HogReader::CurrentFileName() const
-{
-    return myChildFile.name;
-}
-
-unsigned int HogReader::CurrentFileSize() const
-{
-    return myChildFile.size;
-}
-
-HogReader::T_FileData HogReader::CurrentFile()
-{
-  if( myFileDataPtr )
+  if (!hasReadFile)
   {
-    // The current file has already be de-ferenced so just return it.
-    return myFileDataPtr;
+    // The data for the current file has not been read so skip over the data
+    // section
+    // for the file.
+
+    if (fseek(myFile, myChildFile.size, SEEK_CUR) != 0) return false;
   }
 
+  // Read in the header for the next file.
+  if (fread(&myChildFile.name, 13, 1, myFile) != 1) return false;
+  if (fread(&myChildFile.size, 4, 1, myFile) != 1) return false;
+
+  hasReadFile = false; // We haven't read the next file yet.
+  return true;
+}
+
+const char* HogReader::CurrentFileName() const { return myChildFile.name; }
+
+unsigned int HogReader::CurrentFileSize() const { return myChildFile.size; }
+
+std::vector<uint8_t> HogReader::CurrentFile()
+{
+  std::vector<uint8_t> fileData;
+
+  // TODO: Allow this to seek-back and read it again.
+  //
+  // For now ensure the current file hasn't been read yet.
+  assert(!hasReadFile);
+
   // Skip the current file.
-  if( feof(myFile) ) return NULL;
+  if (feof(myFile)) return fileData;
 
   const unsigned int size = CurrentFileSize(); // Size in bytes
+  fileData.resize(size);
 
-  myFileDataPtr = std::make_shared<std::vector<uint8_t>>(size);
+  if (fread(fileData.data(), size, 1, myFile) != 1)
+  {
+    fileData.clear();
+  }
 
-  if( fread( &myFileDataPtr->front(), size, 1, myFile ) != 1 ) return NULL;
-
-  return myFileDataPtr;
+  return fileData;
 }
 
 #include <string>
@@ -313,8 +269,7 @@ int main(int argc, char* argv[])
                         filename.rbegin())) return;
 
         printf("%s %d\n", n.first, n.second->CurrentFileSize());
-        auto dataPtr = n.second->CurrentFile();
-        auto data = *dataPtr.get(); // Get the vector.
+        const auto data = n.second->CurrentFile();
         RdlReader reader(data);
         printf("Is valid Rdl: %s\n", reader.IsValid() ? "Yes" : "No");
 
