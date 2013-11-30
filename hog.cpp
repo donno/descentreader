@@ -36,6 +36,7 @@
 /////
 
 #include "hogreader.hpp"
+#include "hogiterator.hpp"
 #include "rdl.hpp"
 
 #include <memory>
@@ -60,70 +61,6 @@ static_assert(sizeof(uint8_t) == sizeof(char),
 // The 3-byte MAGIC number at the start of the file format used to identifiy the
 // file as being a Descent HOG file.
 static uint8_t magic[3] = {'D', 'H', 'F'};
-
-class HogReaderIterator
-{
-public:
-  typedef std::pair<const char*, HogReader*> value_type;
-
-  HogReaderIterator()
-    : myReader(NULL),
-      myProgress(false)
-    {
-      myData.first = NULL;
-      myData.second = myReader;
-    }
-
-  HogReaderIterator( HogReader& Reader )
-    :  myReader(&Reader),
-       myProgress(Reader.IsValid())
-    {
-      myData.first = Reader.CurrentFileName();
-      myData.second = myReader;
-    }
-  // Itr(const Itr& o);                   // Copy constructor
-  // Itr& operator=(const Itr& o);        // Assignment operator
-  HogReaderIterator& operator++();                   // Next element
-  value_type& operator*();                   // Dereference
-  bool operator==(const HogReaderIterator& o) const; // Comparison
-  bool operator!=(const HogReaderIterator& o) const; // { return !(this == o);
-
-private:
-  value_type myData;
-  bool myProgress;
-  HogReader* myReader;
-};
-
-HogReaderIterator& HogReaderIterator::operator++()
-{
-    // You can't increment the null so error.
-    myProgress = myReader->NextFile();
-    myData.first = myReader->CurrentFileName();
-
-    // myData.second == myReader.
-    //myData.second = myReader->CurrentFileSize();
-    return *this;
-}
-
-HogReaderIterator::value_type& HogReaderIterator::operator*()
-{
-  return myData;
-}
-
-bool HogReaderIterator::operator==(const HogReaderIterator& o) const
-{
-    if (myReader == o.myReader) return true;
-    if (myReader && o.myReader)
-    {
-	return myData == o.myData;
-    }
-    return myProgress == o.myProgress;
-}
-
-bool HogReaderIterator::operator!=(const HogReaderIterator& o) const
-{
-    return !(*this == o);
-}
 
 HogReader::iterator HogReader::begin()
 {
