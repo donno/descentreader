@@ -190,11 +190,11 @@ int main(int argc, char* argv[])
   const bool listingAllFiles = false;
   if (listingAllFiles)
   {
-    printf("Filename\n");
-    printf("========\n");
+    printf("%-13s Size\n", "Name");
+    printf("=====================\n");
     std::for_each(reader.begin(), reader.end(),
-                  [](HogReader::iterator::value_type n)
-    { printf("%s %p\n", n.first, n.second); });
+                  [](HogReader::iterator::value_type item)
+    { printf("%-13s %d\n", item.name, item.size); });
   }
   else
   {
@@ -202,15 +202,15 @@ int main(int argc, char* argv[])
     // end in the 'rdl' file extension.
     const std::string extentionRdl(".rdl");
     std::for_each(reader.begin(), reader.end(),
-                  [&extentionRdl](HogReader::iterator::value_type n)
+                  [&reader, &extentionRdl](HogReader::iterator::value_type n)
     {
-      const std::string filename(n.first);
+      const std::string filename(n.name);
       if (!std::equal(extentionRdl.rbegin(), extentionRdl.rend(),
                       filename.rbegin()))
         return;
 
-      printf("File: %s Size: %d\n", n.first, n.second->CurrentFileSize());
-      const auto data = n.second->CurrentFile();
+      printf("File: %s Size: %d\n", n.name, reader.CurrentFileSize());
+      const auto data = reader.CurrentFile();
       RdlReader rdlReader(data);
 
       if (!rdlReader.IsValid()) return;

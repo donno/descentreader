@@ -16,35 +16,48 @@
 
 #include "hogreader.hpp"
 
+#include <assert.h>
+
+#include <stdio.h>
+
 HogReaderIterator::HogReaderIterator(HogReader& Reader)
 : myReader(&Reader), myProgress(Reader.IsValid())
 {
-  myData.first = Reader.CurrentFileName();
-  myData.second = myReader;
+  strncpy(myData.name, myReader->CurrentFileName(), 13);
+  myData.size = myReader->CurrentFileSize();
 }
 
 HogReaderIterator& HogReaderIterator::operator++()
 {
   // You can't increment the null so error.
   myProgress = myReader->NextFile();
-  myData.first = myReader->CurrentFileName();
-  // myData.second = myReader->CurrentFileSize();
+  strncpy(myData.name, myReader->CurrentFileName(), 13);
+  myData.size = myReader->CurrentFileSize();
   return *this;
 }
 
-HogReaderIterator::value_type& HogReaderIterator::operator*()
+const HogReaderIterator::value_type& HogReaderIterator::operator*() const
 {
   return myData;
 }
 
+const HogReaderIterator::value_type* HogReaderIterator::operator->() const
+{
+  return &myData;
+}
+
 bool HogReaderIterator::operator==(const HogReaderIterator& o) const
 {
-  if (myReader == o.myReader) return true;
-  if (myReader && o.myReader)
+  if (myReader == nullptr || o.myReader == nullptr)
   {
-    return myData == o.myData;
+    return myProgress == o.myProgress;
   }
-  return myProgress == o.myProgress;
+
+  // You can't compare iterators from two HOG readers..
+  assert(myReader == o.myReader);
+
+  return (strcmp(myData.name, o.myData.name) == 0 &&
+          myData.size == o.myData.size);
 }
 
 bool HogReaderIterator::operator!=(const HogReaderIterator& o) const

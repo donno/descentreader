@@ -14,25 +14,35 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iterator>
+#include <string>
 #include <utility>
+
+#include <stdint.h>
 
 class HogReader;
 
+struct HogFileItem
+{
+  char name[13];
+  uint32_t size;
+};
+
 class HogReaderIterator
+    : public std::iterator<std::forward_iterator_tag, HogFileItem>
 {
 public:
-  typedef std::pair<const char*, HogReader*> value_type;
-
   HogReaderIterator() : myReader(nullptr), myProgress(false)
   {
-    myData.first = nullptr;
-    myData.second = nullptr;
+    myData.name[0] = '\0';
+    myData.size = 0;
   }
 
   HogReaderIterator(HogReader& Reader);
 
   HogReaderIterator& operator++();
-  value_type& operator*();
+  const value_type& operator*() const;
+  const value_type* operator->() const;
   bool operator==(const HogReaderIterator& o) const;
   bool operator!=(const HogReaderIterator& o) const;
 
