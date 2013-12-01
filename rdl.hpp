@@ -67,8 +67,6 @@ public:
   std::vector<Vertex> Vertices() const;
   std::vector<Cube> Cubes() const;
 
-  void DoStuff();
-
 private:
   size_t CubeOffset() const;
   // The index of the first cube in the file.

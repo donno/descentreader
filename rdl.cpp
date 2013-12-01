@@ -220,10 +220,8 @@ std::vector<Cube> RdlReader::Cubes() const
       if ((cube.textures[j].primaryTextureNumber >> 15) & 1)
       {
         cube.textures[j].secondaryTextureNumber = reader.ReadUInt16();
-        // cube.textures[j].primaryTextureNumber <<= 1;
-        // cube.textures[j].primaryTextureNumber >>= 1;
         // printf("Side: %d: Texture: %d and %d\n", j + 1,
-        //        cube.textures[j].primaryTextureNumber,
+        //        cube.textures[j].primaryTextureNumber & ~(1 << 15),
         //        cube.textures[j].secondaryTextureNumber & 0xFFF);
       }
       else
@@ -242,146 +240,6 @@ std::vector<Cube> RdlReader::Cubes() const
     }
   }
   return cubes;
-}
-
-void RdlReader::DoStuff()
-{
-  ArrayReader reader(myData.data(), myData.size());
-  reader.Seek(myHeader->mineDataOffset + 1 /* version */);
-
-  const uint16_t vertexCount = reader.ReadUInt16();
-  const uint16_t cubeCount = reader.ReadUInt16();
-
-  printf("Vertex count: %d\n", vertexCount);
-  printf("Cube count: %d\n", cubeCount);
-
-  size_t index = CubeOffset();
-  reader.Seek(index);
-
-  for (int i = 0; i < cubeCount; ++i)
-  {
-    // First byte of a cube is the neighbour bitmask.
-    const uint8_t neighborBitmask = reader.ReadByte();
-    ++index;
-
-    const bool isEnergyCenter = (neighborBitmask & (1 << 6)) != 0;
-
-    // Lookup the IDs of the neighbours.
-    int16_t neighbors[6];
-    size_t neighbourCount = 0;
-    for (uint8_t j = 0; j < 6; ++j)
-    {
-      if (neighborBitmask & (1 << j))
-      {
-        neighbors[j] = reader.ReadInt16();
-        ++neighbourCount;
-      }
-      else
-      {
-        neighbors[j] = -1;
-      }
-    }
-
-    index += sizeof(int16_t) * neighbourCount;
-    assert(index == reader.Index());
-
-    // Read the indices of the eight vertices that make up this cube.
-    uint16_t vertices[8];
-    for (uint8_t j = 0; j < 8; ++j)
-    {
-      vertices[j] = reader.ReadUInt16();
-      index += 2;
-      assert(vertices[j] < vertexCount);
-    }
-
-    if (isEnergyCenter)
-    {
-      struct EnergyCenter
-      {
-        uint8_t special;
-        int8_t energyCenterNumber;
-        int16_t value;
-      };
-
-      EnergyCenter energyCentre;
-      energyCentre.special = reader.ReadByte();
-      energyCentre.energyCenterNumber = reader.ReadByte();
-      energyCentre.value = reader.ReadInt16();
-
-      index += 4;
-    }
-
-    const int16_t rawLighting = reader.ReadInt16();
-    const double lighting = rawLighting / (24 * 327.68);
-    index += 2; // Take into account 16-bit number for the lighting.
-
-    // Wall bit masks where a 1 means it is a war or a door.
-    const uint8_t wallMask = reader.ReadByte();
-    ++index;
-    // Value of 1 means it is a wall or a door,
-
-    uint8_t walls[6];
-    for (uint8_t wallIndex = 0; wallIndex < 6; ++wallIndex)
-    {
-      if (wallMask & (1 << wallIndex))
-      {
-        walls[wallIndex] = reader.ReadByte();
-        ++index;
-      }
-      else
-      {
-        walls[wallIndex] = 255;
-      }
-    }
-    assert(index == reader.Index());
-
-    size_t sidesWithTextures = 0;
-
-    // Read texturing information for the sides.
-    RdlTexture textures[6];
-    for (size_t j = 0, count = 6; j < count; ++j)
-    {
-      const bool hasTexture = (neighbors[j] == -1) || (walls[j] != 255);
-      if (!hasTexture) continue;
-
-      ++sidesWithTextures;
-
-      assert(index == reader.Index());
-
-      textures[j].primaryTextureNumber = reader.ReadUInt16();
-      index += 2; // 2 for the primary number.
-
-      if ((textures[j].primaryTextureNumber >> 15) & 1)
-      {
-        textures[j].secondaryTextureNumber = reader.ReadUInt16();
-
-        textures[j].primaryTextureNumber <<= 1;
-        textures[j].primaryTextureNumber >>= 1;
-        // printf("Side: %d: Texture: %d and %d\n", j + 1,
-        //        textures[j].primaryTextureNumber,
-        //        textures[j].secondaryTextureNumber & 0xFFF);
-        index += 2; // 2 bytes for the secondary number.
-      }
-      else
-      {
-        // printf("Side: %d: Texture: %d\n", j + 1,
-        //        textures[j].primaryTextureNumber);
-      }
-
-      assert(index == reader.Index());
-
-      for (int k = 0; k < 4; k++)
-      {
-        // UVLs (3 numbers), each is 16-bits (so 2*3 bytes).
-        const int16_t u = reader.ReadInt16();
-        const int16_t v = reader.ReadInt16();
-        const uint16_t l = reader.ReadUInt16();
-        index += 2 * 3;
-      }
-    }
-
-    printf("Cube %d: Lighting: %.2f\n", i, lighting);
-  }
 }
 
 size_t RdlReader::CubeOffset() const
