@@ -18,6 +18,7 @@
 
 #include <assert.h>
 
+#include <string.h>
 #include <stdio.h>
 
 HogReaderIterator::HogReaderIterator(HogReader& Reader)
