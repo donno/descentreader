@@ -31,6 +31,7 @@
 
 #include "rdl.hpp"
 
+#include <assert.h>
 #include <string.h>
 
 // The 4-byte MAGIC number at the start of the file format used to identifiy the
@@ -46,10 +47,13 @@ struct RdlHeader
   uint32_t fileSize;
 };
 
-//uint16_t vertexCount;
-//uint16_t cubeCount;
-//Vertex verticies[vertexCount];
-//Cube cubes[cubeCount];
+//struct RdlMineData
+//{
+//  uint16_t vertexCount;
+//  uint16_t cubeCount;
+//  Vertex verticies[vertexCount]; // Vertex = { int32_t, int32_t, int32_t};
+//  Cube cubes[cubeCount];
+//};
 
 static_assert(sizeof(RdlHeader) == 20,
               "The RdlHeader structure is incorrectly packed");
@@ -91,11 +95,11 @@ void RdlReader::DoStuff()
 
   index += 4; // We just read 4 bytes for the two counts.
 
-  printf("\nVertex count: %d\n", vertexCount);
+  printf("Vertex count: %d\n", vertexCount);
   printf("Cube count: %d\n", cubeCount);
 
   int32_t buffer[3];
-  for (int i = 0; i < vertexCount; index += 4 * 2, ++i )
+  for (int i = 0; i < vertexCount; index += sizeof(buffer), ++i )
   {
     memcpy( &buffer, &myData[index], sizeof(buffer) );
     const double x = fixedToFloating(buffer[0]);
@@ -104,6 +108,9 @@ void RdlReader::DoStuff()
 
     printf("%f %f %f\n", x, y, z);
   }
+
+  // A check to ensure index is current positioned at the start of the cubes.
+  assert( index == myHeader->mineDataOffset + 1 + 4 + 12 *  vertexCount );
 
   exit(0);
 }
