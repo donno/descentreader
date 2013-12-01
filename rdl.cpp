@@ -32,6 +32,7 @@ inline double fixedToFloating(int32_t value)
 {
   return value / 65536.0;
 }
+
 inline double fixedToFloating(int16_t value)
 {
   return value / 4096.0;
@@ -104,18 +105,20 @@ std::vector<Vertex> RdlReader::Vertices() const
   const uint16_t vertexCount = (myData[index + 1] << 8) + myData[index + 0];
   std::vector<Vertex> vertices(vertexCount);
 
-  index += 2; // For reading the vertex count.
+  index += 4; // For reading the vertex count and skipping the cube count.
 
   int32_t buffer[3];
-  for (int i = 0; i < vertexCount; index += 3 * 2, ++i)
+  for (int i = 0; i < vertexCount; index += 12, ++i)
   {
     // 32-bit fixed point number, in 16:16 format
-    memcpy(&buffer, &myData[index], sizeof(buffer));
+    memcpy(&buffer, &myData[index], 3 * sizeof(int32_t));
+
     vertices[i].x = fixedToFloating(buffer[0]);
     vertices[i].y = fixedToFloating(buffer[1]);
     vertices[i].z = fixedToFloating(buffer[2]);
   }
 
+  assert(index == CubeOffset());
   return vertices;
 }
 
