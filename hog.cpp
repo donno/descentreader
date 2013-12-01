@@ -60,7 +60,7 @@ static_assert(sizeof(uint8_t) == sizeof(char),
 
 // The 3-byte MAGIC number at the start of the file format used to identifiy the
 // file as being a Descent HOG file.
-static uint8_t magic[3] = {'D', 'H', 'F'};
+static uint8_t magic[3] = { 'D', 'H', 'F' };
 
 HogReader::iterator HogReader::begin()
 {
@@ -75,7 +75,10 @@ HogReader::iterator HogReader::begin()
   return HogReaderIterator(*this);
 }
 
-HogReader::iterator HogReader::end() { return HogReaderIterator(); }
+HogReader::iterator HogReader::end()
+{
+  return HogReaderIterator();
+}
 
 HogReader::HogReader(const char* filename) : myFile(nullptr)
 {
@@ -132,9 +135,15 @@ bool HogReader::NextFile()
   return true;
 }
 
-const char* HogReader::CurrentFileName() const { return myChildFile.name; }
+const char* HogReader::CurrentFileName() const
+{
+  return myChildFile.name;
+}
 
-unsigned int HogReader::CurrentFileSize() const { return myChildFile.size; }
+unsigned int HogReader::CurrentFileSize() const
+{
+  return myChildFile.size;
+}
 
 std::vector<uint8_t> HogReader::CurrentFile()
 {

@@ -17,7 +17,7 @@
 #include "hogreader.hpp"
 
 HogReaderIterator::HogReaderIterator(HogReader& Reader)
-  : myReader(&Reader), myProgress(Reader.IsValid())
+: myReader(&Reader), myProgress(Reader.IsValid())
 {
   myData.first = Reader.CurrentFileName();
   myData.second = myReader;
@@ -33,7 +33,9 @@ HogReaderIterator& HogReaderIterator::operator++()
 }
 
 HogReaderIterator::value_type& HogReaderIterator::operator*()
-{ return myData; }
+{
+  return myData;
+}
 
 bool HogReaderIterator::operator==(const HogReaderIterator& o) const
 {
@@ -46,4 +48,6 @@ bool HogReaderIterator::operator==(const HogReaderIterator& o) const
 }
 
 bool HogReaderIterator::operator!=(const HogReaderIterator& o) const
-{ return !(*this == o); }
+{
+  return !(*this == o);
+}
