@@ -145,26 +145,24 @@ void RdlReader::DoStuff()
     const uint8_t neighborBitmask = myData[index];
     ++index;
 
-    // Determine number of neighbouring cubes (i.e number of 1's in bits 0-5)
-    uint8_t neighbourCount = 0;
-    for (uint8_t j = 0, bitmask = neighborBitmask;
-         j<6; ++j, bitmask = bitmask>> 1)
-    {
-      if (bitmask & 1) ++neighbourCount;
-    }
     const bool isEnergyCenter = (neighborBitmask & (1 << 6)) != 0;
 
-    // printf("Neighbor bitmask: ");
-    // printBitmask(neighborBitmask);
-
     // Lookup the IDs of the neighbours.
-    //
-    // This isn't stricly needed as its not really useful information if you
-    // are going to load all cubes anyway.
-    //
-    // TODO: Not yet implemented (actually reading the neighbor list).
-    std::vector<int16_t> neighbors(neighbourCount);
-    index += sizeof(int16_t) * neighbourCount;
+    int16_t neighbors[6];
+    size_t neighbourCount = 0;
+    for (uint8_t j = 0; j < 6; ++j)
+    {
+      if (neighborBitmask & (1 << j))
+      {
+        neighbors[j] = (myData[index + 1] << 8) + myData[index + 0];
+        index += 2;
+        ++neighbourCount;
+      }
+      else
+      {
+        neighbors[j] = -1;
+      }
+    }
 
     // Read the indcies of the eight vertices that make up this cube.
     //
@@ -176,17 +174,11 @@ void RdlReader::DoStuff()
       vertices[j] = (myData[index + 1] << 8) + myData[index + 0];
       // vertices[j] = (myData[index + 1] << 0) + (myData[index + 0] << 8);
       index += 2;
-
-      if (vertices[j] >= vertexCount)
-      {
-        // printf("%d\n", vertices[j]);
-      }
       assert(vertices[j] < vertexCount);
     }
 
     if (isEnergyCenter)
     {
-      printf("is energy centre\n");
       struct EnergyCenter
       {
         uint8_t special;
@@ -207,42 +199,29 @@ void RdlReader::DoStuff()
     const uint8_t wallMask = myData[index];
     ++index;
     // Value of 1 means it is a wall or a door,
-    uint8_t wallCount = 0;
-    for (uint8_t j = 0, bitmask = wallMask; j<6; ++j, bitmask = bitmask>> 1)
+
+    uint8_t walls[6];
+    for (uint8_t wallIndex = 0; wallIndex < 6; ++wallIndex)
     {
-      if (bitmask & 1) ++wallCount;
+      if (wallMask & (1 << wallIndex))
+      {
+        walls[wallIndex] = myData[index];
+        ++index;
+      }
+      else
+      {
+        walls[wallIndex] = 255;
+      }
     }
-
-    // printf("Wall bitmask: ");
-    // printBitmask(wallMask);
-
-    // For each bit in the wallMask there is an unsigned byte after which is the
-    // ID of the wall. Where 255 means -1 and no wall.
-    for (uint8_t j = 0; j < wallCount; ++j)
-    {
-      // Read the id of the wall..
-      // printf("Wall: %d\n", myData[index + j]);
-    }
-    index += wallCount;
-
-    totalWallCount += wallCount;
-    // For each side that doesn't have a neigbour
-    //     6 - neighbourCount
-
-    // Read texturing information for the sides.
-
-    // 0 to 6 detemrine based on this...
-
-    // Determine if a side is textured....
 
     size_t sidesWithTextures = 0;
+
+    // Read texturing information for the sides.
     RdlTexture textures[6];
     for (size_t j = 0, count = 6; j < count; ++j)
     {
-      // Determine if this side has a texture
-      const bool hasNoTexture =
-          (neighborBitmask & (1 << j)) || ((wallMask & (1 << j)) != 0);
-      if (hasNoTexture) continue;
+      const bool hasTexture = (neighbors[j] == -1) || (walls[j] != 255);
+      if (!hasTexture) continue;
 
       ++sidesWithTextures;
 
@@ -253,20 +232,17 @@ void RdlReader::DoStuff()
 
       if ((textures[j].primaryTextureNumber >> 15) & 1)
       {
-        textures[j].secondaryTextureNumber =
-            (myData[index + 1] << 8) + myData[index + 0];
-
         textures[j].primaryTextureNumber <<= 1;
         textures[j].primaryTextureNumber >>= 1;
-        printf("Side: %d: Texture: %d and %d\n", j + 1,
-               textures[j].primaryTextureNumber,
-               textures[j].secondaryTextureNumber & 0xFFF);
+        // printf("Side: %d: Texture: %d and %d\n", j + 1,
+        //        textures[j].primaryTextureNumber,
+        //        textures[j].secondaryTextureNumber & 0xFFF);
         index += 2; // 2 bytes for the secondary number.
       }
       else
       {
-        printf("Side: %d: Texture: %d\n", j + 1,
-               textures[j].primaryTextureNumber);
+        // printf("Side: %d: Texture: %d\n", j + 1,
+        //        textures[j].primaryTextureNumber);
       }
 
       for (int k = 0; k < 4; k++)
@@ -279,15 +255,11 @@ void RdlReader::DoStuff()
       }
     }
 
-    printf("Counts: %d walls, %d neighbours, %d textured sides\n", wallCount,
-           neighbourCount, sidesWithTextures);
-    printf("Is energy center: %c\n", isEnergyCenter ? 'y' : 'n');
-    printf("Lighting: %f\n", lighting);
-    printf("Difference: %d\n", index - cubeStartIndex);
-    printf("    NEXT\n");
+    // printf("Counts: %d walls, %d neighbours, %d textured sides\n", wallCount,
+    //       neighbourCount, sidesWithTextures);
+    // printf("Is energy center: %c\n", isEnergyCenter ? 'y' : 'n');
+    printf("Cube %d: Lighting: %.2f\n", i, lighting);
   }
-
-  printf("Total wall count: %d\n", totalWallCount);
 }
 
 size_t RdlReader::CubeOffset() const
