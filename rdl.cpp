@@ -111,7 +111,7 @@ std::vector<Vertex> RdlReader::Vertices() const
 {
   // First step, determine how many vertices there are.
   size_t index = myHeader->mineDataOffset + 1 /* version byte */;
-  const uint16_t vertexCount = (myData[index + 1] << 8) +  myData[index + 0];
+  const uint16_t vertexCount = (myData[index + 1] << 8) + myData[index + 0];
   std::vector<Vertex> vertices(vertexCount);
 
   index += 2; // For reading the vertex count.

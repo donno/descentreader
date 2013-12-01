@@ -168,8 +168,9 @@ std::vector<uint8_t> HogReader::CurrentFile()
   return fileData;
 }
 
-#include <string>
 #include <algorithm>
+#include <iostream>
+#include <string>
 
 int main(int argc, char* argv[])
 {
@@ -186,15 +187,32 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  // File list.
-  const bool listingAllFiles = false;
-  if (listingAllFiles)
+  enum Mode
+  {
+    ListAllFiles,
+    ExportToPly,
+    Debug
+  };
+
+  const Mode mode = ExportToPly;
+  if (mode == ListAllFiles)
   {
     printf("%-13s Size\n", "Name");
     printf("=====================\n");
     std::for_each(reader.begin(), reader.end(),
                   [](HogReader::iterator::value_type item)
     { printf("%-13s %d\n", item.name, item.size); });
+  }
+  else if (mode == ExportToPly)
+  {
+    auto file = std::find_if(reader.begin(), reader.end(),
+                             [](const HogReader::iterator::value_type & v)->bool
+    { return strcmp(v.name, "level02.rdl") == 0; });
+
+    std::cout << "ply" << std::endl;
+    std::cout << "format ascii 1.0" << std::endl;
+    std::cout << "comment An exported Descent 1 level (" << (*file).name << ")"
+              << std::endl;
   }
   else
   {
