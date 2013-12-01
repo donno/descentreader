@@ -117,11 +117,10 @@ std::vector<Vertex> RdlReader::Vertices() const
   index += 2; // For reading the vertex count.
 
   int32_t buffer[3];
-  for (int i = 0; i < vertexCount; index += sizeof(buffer), ++i)
+  for (int i = 0; i < vertexCount; index += 3 * 2, ++i)
   {
-    memcpy(&buffer, &myData[index], sizeof(buffer));
-
     // 32-bit fixed point number, in 16:16 format
+    memcpy(&buffer, &myData[index], sizeof(buffer));
     vertices[i].x = fixedToFloating(buffer[0]);
     vertices[i].y = fixedToFloating(buffer[1]);
     vertices[i].z = fixedToFloating(buffer[2]);
