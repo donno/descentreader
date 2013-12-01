@@ -80,7 +80,7 @@ HogReader::iterator HogReader::end()
   return HogReaderIterator();
 }
 
-HogReader::HogReader(const char* filename) : myFile(nullptr)
+HogReader::HogReader(const char* filename) : myFile(nullptr), hasReadFile(false)
 {
   myFile = fopen(filename, "rb");
   myChildFile.name[0] = '\0';
