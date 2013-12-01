@@ -86,9 +86,9 @@ RdlReader::RdlReader(const std::vector<uint8_t>& Data)
     : myData(Data),
       myHeader(reinterpret_cast<const struct RdlHeader* const>(&Data.front()))
 {
-  printf("Version: %d\n", myHeader->version);
-  printf("Mine data offset: %d\n", myHeader->mineDataOffset);
-  printf("Object offset: %d\n", myHeader->objectsOffset);
+  // printf("Version: %d\n", myHeader->version);
+  // printf("Mine data offset: %d\n", myHeader->mineDataOffset);
+  // printf("Object offset: %d\n", myHeader->objectsOffset);
 }
 
 bool RdlReader::IsValid() const
@@ -213,8 +213,6 @@ void RdlReader::DoStuff()
       if (bitmask & 1) ++wallCount;
     }
 
-    printf("Wall count: %d\n", wallCount);
-
     // printf("Wall bitmask: ");
     // printBitmask(wallMask);
 
@@ -260,14 +258,15 @@ void RdlReader::DoStuff()
 
         textures[j].primaryTextureNumber <<= 1;
         textures[j].primaryTextureNumber >>= 1;
-        printf("Side: %d: Texture: %d\n", j, textures[j].primaryTextureNumber);
-        printf("Side: %d: Second texture: %d.\n", j,
-               textures[j].secondaryTextureNumber);
+        printf("Side: %d: Texture: %d and %d\n", j + 1,
+               textures[j].primaryTextureNumber,
+               textures[j].secondaryTextureNumber & 0xFFF);
         index += 2; // 2 bytes for the secondary number.
       }
       else
       {
-        printf("Side: %d: Texture: %d\n", j, textures[j].primaryTextureNumber);
+        printf("Side: %d: Texture: %d\n", j + 1,
+               textures[j].primaryTextureNumber);
       }
 
       for (int k = 0; k < 4; k++)
@@ -280,10 +279,8 @@ void RdlReader::DoStuff()
       }
     }
 
-    printf("sidesWithTextures: %d\n", sidesWithTextures);
-    printf("Wall count: %d\n", wallCount);
-    printf("Wall count derived: %d\n", 6 - neighbourCount);
-    printf("Neighbour count: %d\n", neighbourCount);
+    printf("Counts: %d walls, %d neighbours, %d textured sides\n", wallCount,
+           neighbourCount, sidesWithTextures);
     printf("Is energy center: %c\n", isEnergyCenter ? 'y' : 'n');
     printf("Lighting: %f\n", lighting);
     printf("Difference: %d\n", index - cubeStartIndex);

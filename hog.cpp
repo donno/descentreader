@@ -200,10 +200,9 @@ int main(int argc, char* argv[])
                       filename.rbegin()))
         return;
 
-      printf("%s %d\n", n.first, n.second->CurrentFileSize());
+      printf("File: %s Size: %d\n", n.first, n.second->CurrentFileSize());
       const auto data = n.second->CurrentFile();
       RdlReader rdlReader(data);
-      printf("Is valid RDL: %s\n", rdlReader.IsValid() ? "Yes" : "No");
 
       if (!rdlReader.IsValid()) return;
 
