@@ -35,6 +35,8 @@
 //
 /////
 
+#include "rdl.hpp"
+
 #include <iterator>
 #include <utility>
 #include <vector>
@@ -42,17 +44,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef _MSC_VER
-  typedef signed __int8     int8_t;
-  typedef signed __int16    int16_t;
-  typedef signed __int32    int32_t;
-  typedef unsigned __int8   uint8_t;
-  typedef unsigned __int16  uint16_t;
-  typedef unsigned __int32  uint32_t;
-#else
-  #include <stdint.h>
-#endif
 
 static_assert( sizeof(uint8_t) == 1 , "The size of uint8_t is incorrect it must be 1-byte" );
 static_assert( sizeof(uint32_t) == 4, "The size of uint32_t is incorrect it must be 4-bytes" );
@@ -76,7 +67,9 @@ class HogReaderIterator;
 class HogReader
 {
 public:
-    typedef HogReaderIterator iterator;
+  typedef HogReaderIterator iterator;
+
+  typedef std::shared_ptr<std::vector<uint8_t>> T_FileData;
 
     HogReader(const char* filename);
     ~HogReader();
@@ -87,24 +80,22 @@ public:
 
     bool NextFile();
 
-    const char* CurrentFileName() const;
-    unsigned int CurrentFileSize() const;
 
-    iterator begin();
-    iterator end();
+  T_FileData CurrentFile();
+  // Returns a shared pointer to the vector containing the data for the current file.
 
+  const char* CurrentFileName() const;
+  unsigned int CurrentFileSize() const;
 
-  std::shared_ptr<std::vector<uint8_t>> operator *();
-  // Returns the data of the current file and points the Current* files to the next
-  // file. You should still call NextFile() and not rely on the fact it is moved to
-  // the next file for 
-
+  iterator begin();
+  iterator end();
+  
 private:
   FILE* myFile;
   uint8_t myHeader[sizeof(magic)];
   struct HogFileHeader myChildFile;
 
-  std::shared_ptr<std::vector<uint8_t>>  myFileDataPtr; // Only valid when we are deferenced until the next read.
+  T_FileData myFileDataPtr; // Only valid when we are deferenced until the next read.
 };
 
 class HogReaderIterator
@@ -201,15 +192,15 @@ HogReader::HogReader(const char* filename)
     const size_t count = 1;
     if( fread(myHeader, sizeof(myHeader), count, myFile) != count )
     {
-	myHeader[0] = '\0'; // Failed to load.
-	return;
+      myHeader[0] = '\0'; // Failed to load.
+      return;
     }
 
     // Read in the header for the first file.
     if (IsValid())
     {
-	if( fread( &myChildFile.name, 13, 1, myFile ) != 1 ) return;
-	if( fread( &myChildFile.size, 4, 1, myFile ) != 1 ) return;
+      if( fread( &myChildFile.name, 13, 1, myFile ) != 1 ) return;
+      if( fread( &myChildFile.size, 4, 1, myFile ) != 1 ) return;
     }
 }
 
@@ -220,8 +211,8 @@ HogReader::~HogReader()
 
 bool HogReader::IsValid() const
 {
-    if( !myFile ) return false;
-    return memcmp( myHeader, magic, 3 ) == 0;
+  if( !myFile ) return false;
+  return memcmp( myHeader, magic, 3 ) == 0;
 }
 
 bool HogReader::NextFile()
@@ -229,21 +220,19 @@ bool HogReader::NextFile()
     // Skip the current file.
     if( feof(myFile) ) return false; 
 
-    if (myFileDataPtr)
+    if( !myFileDataPtr )
     {
-      // The data for the current file has already been read in and the header for
-      // the next file has already been read.
-      myFileDataPtr = NULL;
-      return true;
+      // The data for the current file has not been read so skip over the data section
+      // for the file.
+      
+      if( fseek( myFile, myChildFile.size, SEEK_CUR ) != 0 ) return false;
     }
-
-    // Skip of the data for the current file.
-    if( fseek( myFile, myChildFile.size, SEEK_CUR ) != 0 ) return false;
 
     // Read in the header for the next file.
     if( fread( &myChildFile.name, 13, 1, myFile ) != 1 ) return false;
     if( fread( &myChildFile.size, 4, 1, myFile ) != 1 ) return false;
 
+    myFileDataPtr = NULL; // Invalid the data as we have moved along.
     return true;
 }
 
@@ -257,7 +246,7 @@ unsigned int HogReader::CurrentFileSize() const
     return myChildFile.size;
 }
 
-std::shared_ptr<std::vector<uint8_t>> HogReader::operator *()
+HogReader::T_FileData HogReader::CurrentFile()
 {
   if( myFileDataPtr )
   {
@@ -268,24 +257,14 @@ std::shared_ptr<std::vector<uint8_t>> HogReader::operator *()
   // Skip the current file.
   if( feof(myFile) ) return NULL; 
 
-  const unsigned int size = CurrentFileSize();
+  const unsigned int size = CurrentFileSize(); // Size in bytes
 
-  auto data = std::make_shared<std::vector<uint8_t>>(size);
+  myFileDataPtr = std::make_shared<std::vector<uint8_t>>(size);
 
+  if( fread( &myFileDataPtr->front(), size, 1, myFile ) != 1 ) return NULL;
 
-  if( fread( &data->front(), size, 1, myFile ) != 1 ) return NULL;
-
-  // The data is read so we need to inform the NextFile function not to increment.
-  myFileDataPtr = data;
-
-  // Read in the header for the next file.
-  fread( &myChildFile.name, 13, 1, myFile );
-  fread( &myChildFile.size, 4, 1, myFile );
-
-  return data;
+  return myFileDataPtr;
 }
-
-#include "rdl.cpp"
 
 #include <string>
 #include <algorithm>
@@ -322,21 +301,25 @@ int main(int argc, char* argv[])
   {
     // Iterate over the file list and list all the files which do not
     // end in the 'rdl' file extension.
-    std::string extentionRdl(".rdl");
+    const std::string extentionRdl(".rdl");
 
     std::for_each(
       reader.begin(), reader.end(),
       [&extentionRdl](HogReader::iterator::value_type n)
       {
-	std::string filename(n.first);
-	if (!std::equal(extentionRdl.rbegin(), 
-			extentionRdl.rend(),
-			filename.rbegin())) return;
+        std::string filename(n.first);
+        if (!std::equal(extentionRdl.rbegin(),
+                        extentionRdl.rend(),
+                        filename.rbegin())) return;
 
-       	printf("%s %d\n", n.first, n.second->CurrentFileSize());
-	auto dataPtr = **(n.second);
-	const std::vector<uint8_t>& data = *dataPtr.get(); // Get the vector.
-	printf("%c%c%c\n", data[0], data[1], data[2]);
+        printf("%s %d\n", n.first, n.second->CurrentFileSize());
+        auto dataPtr = n.second->CurrentFile();
+        auto data = *dataPtr.get(); // Get the vector.
+        RdlReader reader(data);
+        printf("Is valid Rdl: %s\n", reader.IsValid() ? "Yes" : "No");
+
+        if( !reader.IsValid() ) return;
+        reader.DoStuff();
       });
 
     // std::for_each(
