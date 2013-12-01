@@ -32,6 +32,7 @@
 #include "rdl.hpp"
 
 #include "arrayreader.hpp"
+#include "cube.hpp"
 
 #include <assert.h>
 #include <string.h>
@@ -129,6 +130,120 @@ std::vector<Vertex> RdlReader::Vertices() const
   return vertices;
 }
 
+std::vector<Cube> RdlReader::Cubes() const
+{
+  ArrayReader reader(myData.data(), myData.size());
+  reader.Seek(myHeader->mineDataOffset + 1 /* version */);
+
+  // First step, determine how many vertices and cubes there are.
+  const uint16_t vertexCount = reader.ReadUInt16();
+  const uint16_t cubeCount = reader.ReadUInt16();
+
+  // Skip over the vertex data and go to the cubes.
+  reader.Seek(CubeOffset());
+  std::vector<Cube> cubes(cubeCount);
+  for (int i = 0; i < cubeCount; ++i)
+  {
+    Cube& cube = cubes[i];
+    const uint8_t neighbourBitmask = reader.ReadByte();
+    const bool isEnergyCenter = (neighbourBitmask & (1 << 6)) != 0;
+
+    // Read neighbour information.
+    for (uint8_t j = 0; j < 6; ++j)
+    {
+      if (neighbourBitmask & (1 << j))
+      {
+        cube.neighbors[j] = reader.ReadInt16();
+      }
+      else
+      {
+        cube.neighbors[j] = -1;
+      }
+    }
+
+    // Read the indices of the eight vertices that make up this cube.
+    for (uint8_t j = 0; j < 8; ++j)
+    {
+      cube.vertices[j] = reader.ReadUInt16();
+      assert(cube.vertices[j] < vertexCount);
+    }
+
+    // Optionally there are four-bytes that define the energy centre.
+    // This probably needs to be given a better name.
+    if (isEnergyCenter)
+    {
+      struct EnergyCenter
+      {
+        uint8_t special;
+        int8_t energyCenterNumber;
+        int16_t value;
+      };
+
+      // TODO: Store this information in the Cube.
+      EnergyCenter energyCentre;
+      energyCentre.special = reader.ReadByte();
+      energyCentre.energyCenterNumber = reader.ReadByte();
+      energyCentre.value = reader.ReadInt16();
+    }
+
+    const int16_t rawLighting = reader.ReadInt16();
+    cube.lighting = rawLighting / (24 * 327.68);
+
+    // Wall bit masks where a 1 means it is a wall or door.
+    const uint8_t wallMask = reader.ReadByte();
+    for (uint8_t wallIndex = 0; wallIndex < 6; ++wallIndex)
+    {
+      if (wallMask & (1 << wallIndex))
+      {
+        cube.walls[wallIndex] = reader.ReadByte();
+      }
+      else
+      {
+        cube.walls[wallIndex] = 255;
+      }
+    }
+
+    // Read texturing information for the sides.
+    for (size_t j = 0, count = 6; j < count; ++j)
+    {
+      const bool hasTexture =
+          (cube.neighbors[j] == -1) || (cube.walls[j] != 255);
+      if (!hasTexture)
+      {
+        cube.textures[j].primaryTextureNumber = 0;
+        cube.textures[j].secondaryTextureNumber = 0;
+        continue;
+      }
+
+      cube.textures[j].primaryTextureNumber = reader.ReadUInt16();
+
+      if ((cube.textures[j].primaryTextureNumber >> 15) & 1)
+      {
+        cube.textures[j].secondaryTextureNumber = reader.ReadUInt16();
+        // cube.textures[j].primaryTextureNumber <<= 1;
+        // cube.textures[j].primaryTextureNumber >>= 1;
+        // printf("Side: %d: Texture: %d and %d\n", j + 1,
+        //        cube.textures[j].primaryTextureNumber,
+        //        cube.textures[j].secondaryTextureNumber & 0xFFF);
+      }
+      else
+      {
+        // printf("Side: %d: Texture: %d\n", j + 1,
+        //        cube.textures[j].primaryTextureNumber);
+      }
+
+      for (int k = 0; k < 4; k++)
+      {
+        // UVLs (3 numbers), each is 16-bits (so 2*3 bytes).
+        const int16_t u = reader.ReadInt16();
+        const int16_t v = reader.ReadInt16();
+        const uint16_t l = reader.ReadUInt16();
+      }
+    }
+  }
+  return cubes;
+}
+
 void RdlReader::DoStuff()
 {
   ArrayReader reader(myData.data(), myData.size());
@@ -145,8 +260,6 @@ void RdlReader::DoStuff()
 
   for (int i = 0; i < cubeCount; ++i)
   {
-    const size_t cubeStartIndex = index;
-
     // First byte of a cube is the neighbour bitmask.
     const uint8_t neighborBitmask = reader.ReadByte();
     ++index;

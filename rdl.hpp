@@ -45,6 +45,7 @@ typedef unsigned __int32 uint32_t;
 #include <stddef.h>
 #endif
 
+struct Cube;
 struct RdlHeader;
 
 struct Vertex
@@ -64,6 +65,7 @@ public:
   // Returns true if magic header is correct.
 
   std::vector<Vertex> Vertices() const;
+  std::vector<Cube> Cubes() const;
 
   void DoStuff();
 
