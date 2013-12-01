@@ -209,10 +209,24 @@ int main(int argc, char* argv[])
                              [](const HogReader::iterator::value_type & v)->bool
     { return strcmp(v.name, "level02.rdl") == 0; });
 
+    // TODO: Provide a way to get to the file data from the iterator.
+    const auto data = reader.CurrentFile();
+    RdlReader rdlReader(data);
+    const auto vertices = rdlReader.Vertices();
+
     std::cout << "ply" << std::endl;
     std::cout << "format ascii 1.0" << std::endl;
     std::cout << "comment An exported Descent 1 level (" << (*file).name << ")"
               << std::endl;
+
+    std::cout << "element vertex " << vertices.size() << std::endl;
+    std::cout << "property float x" << std::endl;
+    std::cout << "property float y" << std::endl;
+    std::cout << "property float z" << std::endl;
+    std::cout << "end_header" << std::endl;
+
+    std::for_each(vertices.begin(), vertices.end(), [](Vertex v)
+    { printf("%f %f %f\n", v.x, v.y, v.z); });
   }
   else
   {
