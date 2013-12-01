@@ -15,19 +15,8 @@
 //
 //                - Magic number which is 4 bytes and corresponding to the
 //                  string "LVLP"
-
-//                - A series of files which are preceded by a short header,
-//                  which describes the name of the file and the numer of bytes.
 //
-//                 | "DLVLP - 3 bytes
-//                 |---------------- Start of the first file
-//                 | filename - 13 bytes
-//                 | size - 4 bytes
-//                 | data - the size of this part is by the size before it.
-//                 |---------------- The next header/file comes straight after.
-//                 | filename - 13 bytes
-//                 | size - 4 bytes
-//                 | data - the size of this part is by the size before it.
+//                - TODO: Document the rest of the format.
 //
 //===----------------------------------------------------------------------===//
 
