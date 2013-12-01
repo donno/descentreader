@@ -35,6 +35,7 @@
 //
 /////
 
+#include "cube.hpp"
 #include "hogreader.hpp"
 #include "hogiterator.hpp"
 #include "rdl.hpp"
@@ -191,7 +192,7 @@ int main(int argc, char* argv[])
   {
     ListAllFiles,
     ExportToPly,
-    Debug
+    Debug // Performs some other task during development.
   };
 
   const Mode mode = ExportToPly;
@@ -213,7 +214,9 @@ int main(int argc, char* argv[])
     const auto data = reader.CurrentFile();
     RdlReader rdlReader(data);
     const auto vertices = rdlReader.Vertices();
+    const auto cubes = rdlReader.Cubes();
 
+    const size_t faceCount = 0;
     std::cout << "ply" << std::endl;
     std::cout << "format ascii 1.0" << std::endl;
     std::cout << "comment An exported Descent 1 level (" << (*file).name << ")"
@@ -223,10 +226,16 @@ int main(int argc, char* argv[])
     std::cout << "property float x" << std::endl;
     std::cout << "property float y" << std::endl;
     std::cout << "property float z" << std::endl;
+    std::cout << "element face " << faceCount << std::endl;
+    std::cout << "property list uchar int vertex_index" << std::endl;
     std::cout << "end_header" << std::endl;
 
-    std::for_each(vertices.begin(), vertices.end(), [](Vertex v)
-    { printf("%f %f %f\n", v.x, v.y, v.z); });
+    // std::for_each(vertices.begin(), vertices.end(), [](Vertex v)
+    // { printf("%f %f %f\n", v.x, v.y, v.z); });
+
+    size_t i = 0;
+    std::for_each(cubes.begin(), cubes.end(), [&i](const Cube& cube)
+    { printf("Cube %d: Lighting: %.2f\n", i++, cube.lighting); });
   }
   else
   {
@@ -247,17 +256,12 @@ int main(int argc, char* argv[])
 
       if (!rdlReader.IsValid()) return;
 
-      /*
       // Print out the vertices.
       const auto vertices = rdlReader.Vertices();
       printf("Vertex count: %d\n", vertices.size());
       std::for_each(vertices.begin(), vertices.end(),
                     [](Vertex v)
                     { printf("%16f %16f %16f\n", v.x, v.y, v.z); });
-      */
-      rdlReader.DoStuff();
-
-      exit(0);
     });
   }
   return 0;
