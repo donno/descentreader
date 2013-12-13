@@ -173,6 +173,88 @@ std::vector<uint8_t> HogReader::CurrentFile()
 #include <iostream>
 #include <string>
 
+struct Quad
+{
+  size_t a;
+  size_t b;
+  size_t c;
+  size_t d;
+};
+
+void Quads(const Cube& cube, std::vector<Quad>* quads)
+{
+  const uint16_t* const vertices = cube.vertices;
+
+  // Vertices:
+  // 0 - left, front, top
+  // 1 - left, front, bottom
+  // 2 - right, front, bottom
+  // 3 - right, front, top
+  // 4 - left, back, top
+  // 5 - left, back, bottom
+  // 6 - right, back, bottom
+  // 7 - right, back, top
+
+  // Neighbours:
+  enum Neighbour
+  {
+    Left,
+    Top,
+    Right,
+    Bottom,
+    Back,
+    Front
+  };
+
+  if (cube.neighbors[Left] == -1)
+  {
+    const Quad quad = { vertices[0], vertices[1], vertices[5], vertices[4] };
+    quads->push_back(quad);
+  }
+
+  if (cube.neighbors[Top] == -1)
+  {
+    const Quad quad = { vertices[0], vertices[3], vertices[7], vertices[4] };
+    quads->push_back(quad);
+  }
+
+  if (cube.neighbors[Right] == -1)
+  {
+    const Quad quad = { vertices[2], vertices[3], vertices[7], vertices[6] };
+    quads->push_back(quad);
+  }
+
+  if (cube.neighbors[Bottom] == -1)
+  {
+    const Quad quad = { vertices[1], vertices[2], vertices[6], vertices[4] };
+    quads->push_back(quad);
+  }
+
+  if (cube.neighbors[Front] == -1)
+  {
+    const Quad quad = { vertices[0], vertices[1], vertices[2], vertices[3] };
+    quads->push_back(quad);
+  }
+
+  if (cube.neighbors[Back] == -1)
+  {
+    const Quad quad = { vertices[4], vertices[5], vertices[6], vertices[7] };
+    quads->push_back(quad);
+  }
+}
+
+std::vector<Quad> Quads(const std::vector<Cube>& Cubes)
+{
+  // Generate quads from the sides of the cubes.
+  std::vector<Quad> quads;
+  for (auto cube = Cubes.cbegin(), cubeEnd = Cubes.cend(); cube != cubeEnd;
+       ++cube)
+  {
+    Quads(*cube, &quads);
+  }
+  return quads;
+}
+
 int main(int argc, char* argv[])
 {
   if (argc != 2)
@@ -215,6 +297,9 @@ int main(int argc, char* argv[])
     RdlReader rdlReader(data);
     const auto vertices = rdlReader.Vertices();
     const auto cubes = rdlReader.Cubes();
+    const auto quads = Quads(cubes);
+
+    const bool verticesOnly = false;
 
     const size_t faceCount = 0;
     std::cout << "ply" << std::endl;
@@ -226,16 +311,21 @@ int main(int argc, char* argv[])
     std::cout << "property float x" << std::endl;
     std::cout << "property float y" << std::endl;
     std::cout << "property float z" << std::endl;
-    std::cout << "element face " << faceCount << std::endl;
-    std::cout << "property list uchar int vertex_index" << std::endl;
+    if (!verticesOnly)
+    {
+      std::cout << "element face " << quads.size() << std::endl;
+      std::cout << "property list uchar int vertex_index" << std::endl;
+    }
     std::cout << "end_header" << std::endl;
 
-    // std::for_each(vertices.begin(), vertices.end(), [](Vertex v)
-    // { printf("%f %f %f\n", v.x, v.y, v.z); });
+    std::for_each(vertices.begin(), vertices.end(), [](Vertex v)
+    { printf("%f %f %f\n", v.x, v.y, v.z); });
 
-    size_t i = 0;
-    std::for_each(cubes.begin(), cubes.end(), [&i](const Cube& cube)
-    { printf("Cube %d: Lighting: %.2f\n", i++, cube.lighting); });
+    if (!verticesOnly)
+    {
+      std::for_each(quads.begin(), quads.end(), [](const Quad& quad)
+      { printf("4 %d %d %d %d\n", quad.a, quad.b, quad.c, quad.d); });
+    }
   }
   else
   {
