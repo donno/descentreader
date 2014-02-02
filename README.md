@@ -13,6 +13,21 @@ Licenses
 The source code of this project is hereby licenses under the terms of
 "The MIT License". See LICENSE.txt for details.
 
+Building
+---------------------
+The source code is compiled by a build system called cake. Its home page is
+http://cake-build.sourceforge.net/
+
+Cake is a build system written in Python which reads build scripts that are also
+written in Python.
+
+Unfortunately, at the time of writing, the project isn't available via pypi so
+needs to be installed manually by cloning the repository and running
+setup.py install.
+
+Once cake is installed, you can then run "cake builld.cake" to compile the
+project, or simply "cake" as the build.cake argument is implict.
+
 File formats
 ---------------------
 
@@ -28,6 +43,7 @@ References
 
 * HOG file specification: http://www.descent2.com/ddn/specs/hog/
 * RDL file specification: http://www.descent2.com/ddn/specs/rdl/
+* Cake build system: http://cake-build.sourceforge.net/
 
 Coding standard
 ---------------------
