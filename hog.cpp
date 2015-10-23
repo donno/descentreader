@@ -40,6 +40,7 @@
 #include "hogiterator.hpp"
 #include "rdl.hpp"
 
+#include <fstream>
 #include <memory>
 #include <iterator>
 #include <utility>
@@ -300,7 +301,7 @@ int main(int argc, char* argv[])
 {
   if (argc != 2 && argc != 3)
   {
-    printf("usage: %s [-d -l -p] filename\n", argv[0]);
+    printf("usage: %s [-d -l -p -a] filename\n", argv[0]);
     return 1;
   }
 
@@ -308,6 +309,7 @@ int main(int argc, char* argv[])
   {
     ListAllFiles,
     ExportToPly,
+    ExportAllToPly,
     Debug // Performs some other task during development.
   };
 
@@ -336,6 +338,9 @@ int main(int argc, char* argv[])
       break;
     case 'p':
       mode = ExportToPly;
+      break;
+    case 'a':
+      mode = ExportAllToPly;
       break;
     }
 
@@ -370,6 +375,23 @@ int main(int argc, char* argv[])
     const auto data = file.FileContents();
     RdlReader rdlReader(data);
     ::ExportToPly(rdlReader, std::string(file->name), std::cout);
+  }
+  else if (mode == ExportAllToPly)
+  {
+    for (auto file = reader.begin(), end = reader.end(); file != end; ++file)
+    {
+      const std::string name(file->name);
+      if (name.length() < 4) continue;
+      if (name.substr(name.length() - 4) != ".rdl") continue;
+
+      const auto data = file.FileContents();
+      RdlReader rdlReader(data);
+
+      const std::string ply = name.substr(0, name.length() - 4) + ".ply";
+      std::cout << "Writing out " << ply << std::endl;
+      std::ofstream output(ply.c_str());
+      ::ExportToPly(rdlReader, name, output);
+    }
   }
   else
   {
