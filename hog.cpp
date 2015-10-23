@@ -301,7 +301,6 @@ int main(int argc, char* argv[])
 
     const bool verticesOnly = false;
 
-    const size_t faceCount = 0;
     std::cout << "ply" << std::endl;
     std::cout << "format ascii 1.0" << std::endl;
     std::cout << "comment An exported Descent 1 level (" << (*file).name << ")"
