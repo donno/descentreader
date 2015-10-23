@@ -231,7 +231,7 @@ void Quads(const Cube& cube, std::vector<Quad>* quads)
 
   if (cube.neighbors[Bottom] == -1)
   {
-    const Quad quad = { vertices[1], vertices[2], vertices[6], vertices[4] };
+    const Quad quad = { vertices[1], vertices[2], vertices[6], vertices[5] };
     quads->push_back(quad);
   }
 
