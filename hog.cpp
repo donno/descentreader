@@ -165,6 +165,10 @@ std::vector<uint8_t> HogReader::CurrentFile()
   {
     fileData.clear();
   }
+  else
+  {
+    hasReadFile = true;
+  }
 
   return fileData;
 }
