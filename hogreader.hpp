@@ -72,8 +72,8 @@ public:
 private:
   FILE* myFile;
   uint8_t myHeader[3];
-  HogFileHeader myChildFile;
   bool hasReadFile;
+  HogFileHeader myChildFile;
 };
 
 #endif
