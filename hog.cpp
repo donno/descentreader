@@ -363,8 +363,7 @@ int main(int argc, char* argv[])
                              [](const HogReader::iterator::value_type & v)->bool
     { return strcmp(v.name, "level02.rdl") == 0; });
 
-    // TODO: Provide a way to get to the file data from the iterator.
-    const auto data = reader.CurrentFile();
+    const auto data = file.FileContents();
     RdlReader rdlReader(data);
     ::ExportToPly(rdlReader, std::string(file->name), std::cout);
   }

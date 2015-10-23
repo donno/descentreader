@@ -65,3 +65,8 @@ bool HogReaderIterator::operator!=(const HogReaderIterator& o) const
 {
   return !(*this == o);
 }
+
+std::vector<uint8_t> HogReaderIterator::FileContents()
+{
+  return myReader->CurrentFile();
+}

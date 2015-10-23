@@ -15,8 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <iterator>
-#include <string>
 #include <utility>
+#include <vector>
 
 #include <stdint.h>
 
@@ -45,6 +45,9 @@ public:
   const value_type* operator->() const;
   bool operator==(const HogReaderIterator& o) const;
   bool operator!=(const HogReaderIterator& o) const;
+
+  // Returns the contents of the file.
+  std::vector<uint8_t> FileContents();
 
 private:
   value_type myData;
