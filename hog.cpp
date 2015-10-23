@@ -126,7 +126,10 @@ bool HogReader::NextFile()
     // section
     // for the file.
 
-    if (fseek(myFile, myChildFile.size, SEEK_CUR) != 0) return false;
+    if (fseek(myFile, static_cast<long>(myChildFile.size), SEEK_CUR) != 0)
+    {
+      return false;
+    }
   }
 
   // Read in the header for the next file.
