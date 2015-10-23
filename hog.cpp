@@ -257,16 +257,9 @@ std::vector<Quad> Quads(const std::vector<Cube>& Cubes)
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2)
+  if (argc != 2 && argc != 3)
   {
-    printf("usage: %s filename\n", argv[0]);
-    return 1;
-  }
-
-  HogReader reader(argv[1]);
-  if (!reader.IsValid())
-  {
-    fprintf(stderr, "error to open the hog file");
+    printf("usage: %s [-d -l -p] filename\n", argv[0]);
     return 1;
   }
 
@@ -277,7 +270,49 @@ int main(int argc, char* argv[])
     Debug // Performs some other task during development.
   };
 
-  const Mode mode = ExportToPly;
+  Mode mode = ExportToPly;
+  bool filenameIsFirst = true;
+
+  // Command line option parsing
+  if ((argv[1] && argv[1][0] == '-') ||
+      (argc == 3 && argv[2] && argv[2][0] == '-'))
+  {
+    filenameIsFirst = (argv[1][0] != '-');
+    const char option = filenameIsFirst ? argv[2][1] : argv[1][1];
+    switch (option)
+    {
+    default:
+      fprintf(stderr, "error unsupported option provided (%c)", option);
+      return 1;
+    case '\0':
+      fprintf(stderr, "error option specifier - provided but no option");
+      return 1;
+    case 'd':
+      mode = Debug;
+      break;
+    case 'l':
+      mode = ListAllFiles;
+      break;
+    case 'p':
+      mode = ExportToPly;
+      break;
+    }
+
+    if (argc == 2)
+    {
+      fprintf(stderr, "option provided but no filename");
+      return 1;
+    }
+  }
+
+  HogReader reader(filenameIsFirst ? argv[1] : argv[2]);
+  if (!reader.IsValid())
+  {
+    fprintf(stderr, "error to open the hog file");
+    return 1;
+  }
+
+
   if (mode == ListAllFiles)
   {
     printf("%-13s Size\n", "Name");
