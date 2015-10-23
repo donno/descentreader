@@ -255,6 +255,43 @@ std::vector<Quad> Quads(const std::vector<Cube>& Cubes)
   return quads;
 }
 
+void ExportToPly(const RdlReader& Reader, const std::string& Name,
+                 std::ostream& Output)
+{
+  const auto vertices = Reader.Vertices();
+  const auto cubes = Reader.Cubes();
+  const auto quads = Quads(cubes);
+
+  const bool verticesOnly = false;
+
+  Output << "ply" << std::endl;
+  Output << "format ascii 1.0" << std::endl;
+  Output << "comment An exported Descent 1 level (" << Name << ")" << std::endl;
+
+  Output << "element vertex " << vertices.size() << std::endl;
+  Output << "property float x" << std::endl;
+  Output << "property float y" << std::endl;
+  Output << "property float z" << std::endl;
+  if (!verticesOnly)
+  {
+    Output << "element face " << quads.size() << std::endl;
+    Output << "property list uchar int vertex_index" << std::endl;
+  }
+  Output << "end_header" << std::endl;
+
+  std::for_each(vertices.begin(), vertices.end(), [&Output](Vertex v)
+  { Output << v.x << " " << v.y << " " << v.z << std::endl; });
+
+  if (!verticesOnly)
+  {
+    std::for_each(quads.begin(), quads.end(), [&Output](const Quad& quad)
+    {
+      Output << "4 " << quad.a << " " << quad.b << " " << quad.c << " "
+             << quad.d << std::endl;
+    });
+  }
+}
+
 int main(int argc, char* argv[])
 {
   if (argc != 2 && argc != 3)
@@ -312,7 +349,6 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-
   if (mode == ListAllFiles)
   {
     printf("%-13s Size\n", "Name");
@@ -330,36 +366,7 @@ int main(int argc, char* argv[])
     // TODO: Provide a way to get to the file data from the iterator.
     const auto data = reader.CurrentFile();
     RdlReader rdlReader(data);
-    const auto vertices = rdlReader.Vertices();
-    const auto cubes = rdlReader.Cubes();
-    const auto quads = Quads(cubes);
-
-    const bool verticesOnly = false;
-
-    std::cout << "ply" << std::endl;
-    std::cout << "format ascii 1.0" << std::endl;
-    std::cout << "comment An exported Descent 1 level (" << (*file).name << ")"
-              << std::endl;
-
-    std::cout << "element vertex " << vertices.size() << std::endl;
-    std::cout << "property float x" << std::endl;
-    std::cout << "property float y" << std::endl;
-    std::cout << "property float z" << std::endl;
-    if (!verticesOnly)
-    {
-      std::cout << "element face " << quads.size() << std::endl;
-      std::cout << "property list uchar int vertex_index" << std::endl;
-    }
-    std::cout << "end_header" << std::endl;
-
-    std::for_each(vertices.begin(), vertices.end(), [](Vertex v)
-    { printf("%f %f %f\n", v.x, v.y, v.z); });
-
-    if (!verticesOnly)
-    {
-      std::for_each(quads.begin(), quads.end(), [](const Quad& quad)
-      { printf("4 %d %d %d %d\n", quad.a, quad.b, quad.c, quad.d); });
-    }
+    ::ExportToPly(rdlReader, std::string(file->name), std::cout);
   }
   else
   {
