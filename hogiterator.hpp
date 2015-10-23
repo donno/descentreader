@@ -48,8 +48,8 @@ public:
 
 private:
   value_type myData;
-  bool myProgress;
   HogReader* myReader;
+  bool myProgress;
 };
 
 #endif

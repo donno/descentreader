@@ -38,7 +38,7 @@ private:
 };
 
 ArrayReader::ArrayReader(const uint8_t* const array, size_t size)
-: myIndex(0), myArray(array), mySize(size)
+: myIndex(0), mySize(size), myArray(array)
 {
 }
 
