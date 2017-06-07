@@ -417,7 +417,7 @@ int main(int argc, char* argv[])
 
       // Print out the vertices.
       const auto vertices = rdlReader.Vertices();
-      printf("Vertex count: %d\n", vertices.size());
+      printf("Vertex count: %zd\n", vertices.size());
       std::for_each(vertices.begin(), vertices.end(),
                     [](Vertex v)
                     { printf("%16f %16f %16f\n", v.x, v.y, v.z); });
