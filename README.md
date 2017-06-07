@@ -18,15 +18,23 @@ Building
 The source code is compiled by a build system called cake. Its home page is
 http://cake-build.sourceforge.net/
 
+
 Cake is a build system written in Python which reads build scripts that are also
 written in Python.
 
-Unfortunately, at the time of writing, the project isn't available via pypi so
-needs to be installed manually by cloning the repository and running
-setup.py install.
+Unfortunately, at the time of writing, the project isn't available via pypi or as
+wheel so needs to be installed manually by cloning the repository and running
+setup.py.
 
-Once cake is installed, you can then run "cake builld.cake" to compile the
-project, or simply "cake" as the build.cake argument is implict.
+The steps I've used:
+# $ git clone https://github.com/lewissbaker/cake.git
+# $ cd cake
+# $ python setup.py bdist_wheel
+# $ python -m pip install dist/Cake-0.9.7-py2-none-any.whl
+
+Once cake is installed, you can then run "python -m cake.main build.cake" to
+compile the project, or simply "python -m cake.main" as the build.cake
+argument is implict.
 
 File formats
 ---------------------

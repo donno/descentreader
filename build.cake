@@ -11,7 +11,8 @@
 #
 #===------------------------------------------------------------------------===#
 from cake.tools import compiler, env, script, shell, project, variant
-from cake.library import waitForAsyncResult, getPath
+from cake.async import waitForAsyncResult
+from cake.target import getPath
 
 genProjects = False
 
@@ -35,6 +36,7 @@ compiler.enableExceptions = True
 objs = compiler.objects(
   targetDir=env.expand('$BUILD/objs'),
   sources=sources,
+  language='c++',
   )
 
 prog = compiler.program(

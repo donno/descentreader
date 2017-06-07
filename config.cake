@@ -11,7 +11,7 @@
 #
 #===------------------------------------------------------------------------===#
 from cake.engine import Variant
-from cake.library import waitForAsyncResult
+from cake.async import waitForAsyncResult
 from cake.library.compilers import CompilerNotFoundError
 from cake.library.env import EnvironmentTool
 from cake.library.filesys import FileSystemTool
