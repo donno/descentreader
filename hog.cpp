@@ -206,17 +206,17 @@ void Quads(const Cube& cube, std::vector<Quad>* quads)
   // Neighbours:
   enum Neighbour
   {
-    Left,
-    Top,
     Right,
+    Top,
+    Left,
     Bottom,
     Back,
     Front
   };
 
-  if (cube.neighbors[Left] == -1)
+  if (cube.neighbors[Right] == -1)
   {
-    const Quad quad = { vertices[0], vertices[1], vertices[5], vertices[4] };
+    const Quad quad = { vertices[2], vertices[3], vertices[7], vertices[6] };
     quads->push_back(quad);
   }
 
@@ -226,9 +226,9 @@ void Quads(const Cube& cube, std::vector<Quad>* quads)
     quads->push_back(quad);
   }
 
-  if (cube.neighbors[Right] == -1)
+  if (cube.neighbors[Left] == -1)
   {
-    const Quad quad = { vertices[2], vertices[3], vertices[7], vertices[6] };
+    const Quad quad = { vertices[0], vertices[1], vertices[5], vertices[4] };
     quads->push_back(quad);
   }
 
