@@ -105,14 +105,26 @@ if cake.system.isWindows():
     createVariants(platform, hostArchitecture, compiler)
   except CompilerNotFoundError:
     pass
+
   # Create MSVC Compilers.
-  try:
-    from cake.library.compilers.msvc import findMsvcCompiler
-    for architecture in ["x86", "amd64", "ia64"]:
-      compiler = findMsvcCompiler(configuration=configuration, architecture=architecture)
-      compiler.addDefine("WIN32")
-      if architecture in ["amd64", "ia64"]:
-        compiler.addDefine("WIN64")
-      createVariants(platform, architecture, compiler)
-  except CompilerNotFoundError:
-    pass
+  from cake.library.compilers.msvc import (findMsvcCompiler,
+                                           getVisualStudio2017Compiler)
+  for architecture in ["x86", "x64"]:
+    try:
+      compiler = getVisualStudio2017Compiler(configuration=configuration,
+                                             targetArchitecture=architecture)
+    except CompilerNotFoundError:
+      try:
+        compiler = findMsvcCompiler(configuration=configuration,
+                                    architecture=architecture)
+      except CompilerNotFoundError:
+        pass
+
+    compiler.addDefine("WIN32")
+    if architecture in ["x64"]:
+      compiler.addDefine("WIN64")
+    createVariants(platform, architecture, compiler)
+
+  if sum(1 for _ in configuration.findAllVariants()) == 0:
+    engine.raiseError(
+      "Error: No variants were registered - no suitable compilers found.\n")
