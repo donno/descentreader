@@ -27,14 +27,14 @@ wheel so needs to be installed manually by cloning the repository and running
 setup.py.
 
 The steps I've used:
-# $ git clone https://github.com/lewissbaker/cake.git
-# $ cd cake
-# $ python setup.py bdist_wheel
-# $ python -m pip install dist/Cake-0.9.7-py2-none-any.whl
+* $ git clone https://github.com/lewissbaker/cake.git
+* $ cd cake
+* $ python setup.py bdist_wheel
+* $ python -m pip install dist/Cake-0.9.7-py2-none-any.whl
 
 Once cake is installed, you can then run "python -m cake.main build.cake" to
 compile the project, or simply "python -m cake.main" as the build.cake
-argument is implict.
+argument is implicit.
 
 File formats
 ---------------------
