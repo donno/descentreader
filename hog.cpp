@@ -323,6 +323,7 @@ int main(int argc, char* argv[])
     ExportToPly,
     ExportAllToPly,
     ExportAllText,
+    ExtractAll, // This extracts it as-is no decoding.
     Debug // Performs some other task during development.
   };
 
@@ -357,6 +358,9 @@ int main(int argc, char* argv[])
       break;
     case 't':
       mode = ExportAllText;
+      break;
+    case 'x':
+      mode = ExtractAll;
       break;
     }
 
@@ -425,6 +429,18 @@ int main(int argc, char* argv[])
       std::cout << "Writing out " << txt << std::endl;
       std::ofstream output(txt.c_str());
       ::ExtractTxb(txbReader, name, output);
+    }
+  }
+  else if (mode == ExtractAll)
+  {
+    for (auto file = reader.begin(), end = reader.end(); file != end; ++file)
+    {
+      const auto data = file.FileContents();
+
+      std::cout << "Writing out " << file->name << std::endl;
+      std::ofstream output(file->name);
+      std::copy(data.begin(), data.end(),
+                std::ostream_iterator<uint8_t>(output));
     }
   }
   else
