@@ -36,9 +36,11 @@
 /////
 
 #include "cube.hpp"
-#include "hogreader.hpp"
 #include "hogiterator.hpp"
+#include "hogreader.hpp"
 #include "rdl.hpp"
+#include "txbiterator.hpp"
+#include "txbreader.hpp"
 
 #include <fstream>
 #include <memory>
@@ -63,6 +65,13 @@ static_assert(sizeof(uint8_t) == sizeof(char),
 // The 3-byte MAGIC number at the start of the file format used to identifiy the
 // file as being a Descent HOG file.
 static uint8_t magic[3] = { 'D', 'H', 'F' };
+
+void ExtractTxb(const TxbReader& Reader,
+                const std::string& Name,
+                std::ostream& Output)
+{
+  std::copy(Reader.begin(), Reader.end(), std::ostream_iterator<char>(Output));
+}
 
 HogReader::iterator HogReader::begin()
 {
@@ -313,6 +322,7 @@ int main(int argc, char* argv[])
     ListAllFiles,
     ExportToPly,
     ExportAllToPly,
+    ExportAllText,
     Debug // Performs some other task during development.
   };
 
@@ -344,6 +354,9 @@ int main(int argc, char* argv[])
       break;
     case 'a':
       mode = ExportAllToPly;
+      break;
+    case 't':
+      mode = ExportAllText;
       break;
     }
 
@@ -394,6 +407,24 @@ int main(int argc, char* argv[])
       std::cout << "Writing out " << ply << std::endl;
       std::ofstream output(ply.c_str());
       ::ExportToPly(rdlReader, name, output);
+    }
+  }
+  else if (mode == ExportAllText)
+  {
+    for (auto file = reader.begin(), end = reader.end(); file != end; ++file)
+    {
+      const std::string name(file->name);
+      if (name.length() < 4) continue;
+      if (name.substr(name.length() - 4) != ".txb") continue;
+
+      const auto data = file.FileContents();
+
+      TxbReader txbReader(data);
+
+      const std::string txt = name.substr(0, name.length() - 4) + ".txt";
+      std::cout << "Writing out " << txt << std::endl;
+      std::ofstream output(txt.c_str());
+      ::ExtractTxb(txbReader, name, output);
     }
   }
   else

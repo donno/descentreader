@@ -46,6 +46,22 @@ RDL - Registered Descent Level file which describes the structure of the level.
       There are two key parts of a level, the mine structure (i.e the walls and
       cubes) and objects (i.e where hostages are, robots, cards etc).
 
+TXB - Encoded/encrypted text files which describe the mission briefings.
+
+### Unsupported File formats
+
+Other file types in Descent's HOG files that are not provided by this package.
+- LBM - An image format, with the file extension BBM. This may be related to the
+  Interchange File Format.
+- PCX - Image format used for full screen intro and the sky in outdoor scenes.
+- VGA Palette with file extension 256.
+- HMP - Human Machine Interfaces MIDI Format used for the music. The file
+  starts with HMIMIDIP.
+- FNT - Fonts
+
+Other file extensions seen in the Descent 1 HOG are are raw, sng, bnk (maybe
+sound bank), dig, lgt and clr.
+
 References
 ---------------------
 

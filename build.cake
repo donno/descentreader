@@ -24,6 +24,7 @@ sources = script.cwd([
   'hog.cpp',
   'hogiterator.cpp',
   'rdl.cpp',
+  'txbiterator.cpp',
   ])
 
 compiler.addDefine('_CRT_SECURE_NO_WARNINGS')
